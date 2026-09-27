@@ -1,0 +1,56 @@
+name: Test Root Executable
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch: # Allows you to manually trigger the run from GitHub's "Actions" tab
+
+jobs:
+  test-index-exe:
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      # 1. Verify file presence and basic file info
+      - name: Check file existence and info
+        shell: powershell
+        run: |
+          if (-not (Test-Path ".\index.exe")) {
+            Write-Error "Error: index.exe not found in the root directory!"
+            exit 1
+          }
+          Get-Item ".\index.exe" | Format-List FullName, Length, CreationTime
+
+      # 2. Run the executable safely
+      # This handles both CLI apps that exit naturally and GUI apps that need a timeout
+      - name: Run index.exe smoke test
+        shell: powershell
+        run: |
+          Write-Host "Launching .\index.exe..."
+          
+          # Start the process in the background
+          $process = Start-Process -FilePath ".\index.exe" -PassThru
+          
+          # Wait up to 10 seconds to see if it starts cleanly or crashes
+          $timeoutSeconds = 10
+          $waited = 0
+          while (-not $process.HasExited -and ($waited -lt $timeoutSeconds)) {
+            Start-Sleep -Seconds 1
+            $waited++
+          }
+
+          if ($process.HasExited) {
+            Write-Host "Process terminated on its own with Exit Code: $($process.ExitCode)"
+            if ($process.ExitCode -ne 0) {
+              Write-Error "index.exe exited with an error code: $($process.ExitCode)"
+              exit $process.ExitCode
+            }
+          } else {
+            Write-Host "index.exe launched and stayed alive for $timeoutSeconds seconds (no startup crashes)."
+            Write-Host "Terminating background process..."
+            Stop-Process -Id $process.Id -Force
+          }

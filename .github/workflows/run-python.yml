@@ -28,7 +28,7 @@ jobs:
           PYTHONIOENCODING: "utf-8"
           PYTHONUTF8: "1"
         shell: cmd
-        run: echo. | python index.py
+        run: (echo n & echo.) | python index.py
 
       - name: Upload index.exe artifact
         uses: actions/upload-artifact@v4

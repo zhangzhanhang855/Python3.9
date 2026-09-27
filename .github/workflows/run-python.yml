@@ -2,7 +2,7 @@ name: Build Windows Executable
 
 on:
   push:
-    branches: [ "main" ]  # 如果主分支是 master，请改为 master
+    branches: [ "main" ]  # 如果是 master 请改为 master
   workflow_dispatch:
 
 jobs:
@@ -24,11 +24,17 @@ jobs:
           if (Test-Path requirements.txt) { pip install -r requirements.txt }
 
       - name: Run index.py
-        run: python index.py
+        env:
+          PYTHONIOENCODING: "utf-8"
+          PYTHONUTF8: "1"
+        shell: cmd
+        run: echo. | python index.py
 
       - name: Upload index.exe artifact
         uses: actions/upload-artifact@v4
         with:
           name: index-windows-exe
-          path: index.exe  # 如果生成在 dist 目录，可写为 dist/index.exe
+          path: |
+            index.exe
+            dist/index.exe
           if-no-files-found: warn

@@ -1,0 +1,3335 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""index - Self-Building HTML Launcher"""
+
+import http.server
+import socketserver
+import webbrowser
+import sys
+import os
+import subprocess
+import time
+from threading import Timer
+from pathlib import Path
+
+APP_NAME = "index"
+
+# HTML content to be served. All original triple quotes must be escaped.
+HTML_CONTENT = """<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>JRmusic Cloud · Enterprise Lossless Audio Infrastructure</title>
+
+  <!-- Typography & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    /* ==========================================================================
+       DESIGN SYSTEM CORE & DESIGN TOKENS
+       ========================================================================== */
+    :root {
+      /* Studio Dark Archetype */
+      --bg-deep: #030712;
+      --bg-base: #080d1a;
+      --bg-surface: #0f172a;
+      --bg-surface-elevated: #1e293b;
+      --bg-surface-hover: #334155;
+      --bg-glass: rgba(15, 23, 42, 0.75);
+      --bg-glass-card: rgba(30, 41, 59, 0.55);
+
+      /* Accent Standard (Cobalt Electric & Cyan Glow) */
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --accent-glow: rgba(59, 130, 246, 0.45);
+      --accent-dim: rgba(59, 130, 246, 0.12);
+      --accent-cyan: #06b6d4;
+      --accent-cyan-glow: rgba(6, 182, 212, 0.35);
+      --accent-emerald: #10b981;
+      --accent-emerald-glow: rgba(16, 185, 129, 0.35);
+      --accent-rose: #f43f5e;
+
+      /* Typography Tokens */
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --text-dark: #0f172a;
+
+      /* Border Architecture */
+      --border-subtle: rgba(255, 255, 255, 0.07);
+      --border-elevated: rgba(255, 255, 255, 0.14);
+      --border-accent: rgba(59, 130, 246, 0.35);
+
+      /* Typography Stacks */
+      --font-stack: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-mono: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+
+      /* Geometry & Spacing */
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --sidebar-width: 260px;
+      --player-dock-height: 94px;
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 22px;
+      --radius-full: 9999px;
+
+      /* Transition Physics */
+      --trans-spring: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      --trans-quick: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* ==========================================================================
+       VIP PREMIUM LUXURY THEME (DYNAMIC ACTIVE)
+       ========================================================================== */
+    body.is-premium-tier {
+      --accent: #f59e0b;
+      --accent-hover: #d97706;
+      --accent-glow: rgba(245, 158, 11, 0.5);
+      --accent-dim: rgba(245, 158, 11, 0.15);
+      --accent-cyan: #fbbf24;
+      --accent-cyan-glow: rgba(251, 191, 36, 0.4);
+      --border-accent: rgba(245, 158, 11, 0.45);
+      --border-elevated: rgba(251, 191, 36, 0.3);
+    }
+
+    body.is-premium-tier .premium-gradient-fill {
+      background: linear-gradient(135deg, #fbbf24, #d97706) !important;
+      color: #000 !important;
+    }
+
+    body.is-premium-tier .brand-glow-halo {
+      background: radial-gradient(circle, rgba(245, 158, 11, 0.3) 0%, transparent 70%) !important;
+    }
+
+    body.is-premium-tier .spectrum-bar {
+      background: linear-gradient(180deg, #fde68a, #f59e0b) !important;
+    }
+
+    /* ==========================================================================
+       BASE & RESET
+       ========================================================================== */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: var(--bg-deep);
+      color: var(--text-primary);
+      font-family: var(--font-stack);
+      letter-spacing: -0.015em;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* Background Studio Noise & Light Beams */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: 
+        radial-gradient(ellipse at 15% 0%, rgba(59, 130, 246, 0.12), transparent 50%),
+        radial-gradient(ellipse at 85% 100%, rgba(6, 182, 212, 0.08), transparent 50%),
+        radial-gradient(ellipse at 50% 50%, rgba(15, 23, 42, 0.6), transparent 100%);
+      pointer-events: none;
+      z-index: 0;
+      transition: var(--trans-spring);
+    }
+
+    body.is-premium-tier::before {
+      background: 
+        radial-gradient(ellipse at 20% 0%, rgba(245, 158, 11, 0.15), transparent 55%),
+        radial-gradient(ellipse at 80% 100%, rgba(217, 119, 6, 0.1), transparent 50%),
+        radial-gradient(ellipse at 50% 50%, rgba(15, 23, 42, 0.7), transparent 100%);
+    }
+
+    /* Architectural Geometric Grid Pattern */
+    .app-ambient-grid {
+      position: fixed;
+      inset: 0;
+      background-image: 
+        linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+      background-size: 48px 48px;\n      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* Scrollbars */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); border-radius: 99px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+    /* ==========================================================================
+       TOP NOTIFICATION TOAST NOTIFIER
+       ========================================================================== */
+    #ui-toast-container {
+      position: fixed;
+      top: max(var(--safe-top), 20px);
+      right: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 99999;
+      pointer-events: none;
+    }
+
+    .ui-toast {
+      pointer-events: auto;
+      min-width: 320px;
+      max-width: 440px;
+      padding: 14px 18px;
+      background: rgba(15, 23, 42, 0.92);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border: 1px solid var(--border-elevated);
+      border-radius: var(--radius-md);
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.12);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      color: #fff;
+      font-size: 0.88rem;
+      font-weight: 500;
+      animation: toastIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      transition: var(--trans-quick);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .ui-toast::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 4px;
+      background: var(--accent);
+      box-shadow: 0 0 12px var(--accent);
+    }
+    .ui-toast.success::before { background: var(--accent-emerald); box-shadow: 0 0 12px var(--accent-emerald); }
+    .ui-toast.error::before { background: var(--accent-rose); box-shadow: 0 0 12px var(--accent-rose); }
+    .ui-toast.info::before { background: var(--accent-cyan); box-shadow: 0 0 12px var(--accent-cyan); }
+
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(-16px) scale(0.96); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .toast-fade-out {
+      opacity: 0 !important;
+      transform: translateY(-12px) scale(0.95) !important;
+      transition: all 0.25s ease !important;
+    }
+
+    /* ==========================================================================
+       APP WORKSPACE LAYOUT (SIDEBAR + CONSOLE MAIN + DOCK)
+       ========================================================================== */
+    #workspace-container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      z-index: 10;
+      overflow: hidden;
+    }
+
+    /* Glass Studio Sidebar */
+    aside.studio-sidebar {
+      width: var(--sidebar-width);
+      height: 100%;
+      background: rgba(10, 15, 26, 0.85);
+      backdrop-filter: blur(28px);
+      -webkit-backdrop-filter: blur(28px);
+      border-right: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: calc(var(--safe-top) + 24px) 18px calc(var(--player-dock-height) + var(--safe-bottom) + 16px) 18px;
+      z-index: 30;
+      transition: var(--trans-spring);
+    }
+
+    .sidebar-brand-block {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 6px 10px 24px 10px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .brand-cube-badge {
+      width: 42px;
+      height: 42px;
+      border-radius: var(--radius-md);
+      background: linear-gradient(135deg, var(--accent), #1d4ed8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 24px var(--accent-glow);
+      position: relative;
+      flex-shrink: 0;
+    }
+    .brand-cube-badge svg { width: 22px; height: 22px; fill: #fff; }
+
+    .brand-text-block { display: flex; flex-direction: column; }
+    .brand-main-title { font-size: 1.15rem; font-weight: 800; letter-spacing: -0.03em; color: #fff; line-height: 1.2; }
+    .brand-sub-badge {
+      font-size: 0.65rem;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    /* Navigation Menu */
+    .sidebar-menu-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 24px;
+    }
+
+    .menu-group-label {
+      font-size: 0.68rem;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      padding: 6px 12px;
+    }
+
+    .liquid-nav-item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 14px;
+      border-radius: var(--radius-md);
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--trans-quick);
+      position: relative;
+    }
+
+    .liquid-nav-item svg {
+      width: 20px;
+      height: 20px;
+      fill: currentColor;
+      transition: var(--trans-quick);
+    }
+
+    .liquid-nav-item:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .liquid-nav-item.active {
+      color: #fff;
+      background: var(--accent-dim);
+      border: 1px solid var(--border-accent);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+    }
+    .liquid-nav-item.active svg {
+      fill: var(--accent);
+      transform: scale(1.08);
+    }
+
+    /* Sidebar Footer Account Card */
+    .sidebar-user-card {
+      background: var(--bg-glass-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: var(--trans-quick);
+    }
+    .sidebar-user-card:hover {
+      background: var(--bg-surface-elevated);
+      border-color: var(--border-elevated);
+      transform: translateY(-2px);
+    }
+
+    .user-card-profile { display: flex; align-items: center; gap: 12px; overflow: hidden; }
+    .liquid-user-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--bg-surface-elevated);
+      border: 1.5px solid var(--border-elevated);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.85rem;
+      color: #fff;
+      flex-shrink: 0;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    body.is-premium-tier .liquid-user-btn {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: #000;
+      border-color: #fde68a;
+      box-shadow: 0 0 16px var(--accent-glow);
+    }
+
+    .user-card-info { display: flex; flex-direction: column; overflow: hidden; }
+    .user-card-name { font-size: 0.88rem; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .user-card-role { font-size: 0.7rem; font-family: var(--font-mono); color: var(--text-muted); }
+
+    /* Studio Main Workstation Pane */
+    main.studio-main-body {
+      flex: 1;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Top Studio Operational Bar */
+    header.studio-action-bar {
+      height: calc(var(--safe-top) + 68px);
+      padding-top: var(--safe-top);
+      padding-left: 36px;
+      padding-right: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      background: rgba(8, 13, 26, 0.7);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border-subtle);
+      z-index: 25;
+    }
+
+    .search-dock-module {
+      flex: 1;
+      max-width: 580px;
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .search-dock-module svg {
+      position: absolute;
+      left: 16px;
+      width: 18px;
+      height: 18px;
+      fill: var(--text-muted);
+      pointer-events: none;
+      transition: var(--trans-quick);
+    }
+
+    .cloud-input {
+      width: 100%;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-full);
+      padding: 12px 18px 12px 46px;
+      color: #fff;
+      font-family: var(--font-stack);
+      font-size: 0.9rem;
+      font-weight: 500;
+      outline: none;
+      transition: var(--trans-quick);
+    }
+    .cloud-input:focus {
+      border-color: var(--accent);
+      background: rgba(15, 23, 42, 0.98);
+      box-shadow: 0 0 0 4px var(--accent-dim);
+    }
+    .cloud-input:focus + svg { fill: var(--accent); }
+
+    .search-quick-btn {
+      position: absolute;
+      right: 6px;
+      top: 6px;
+      bottom: 6px;
+      padding: 0 16px;
+      border-radius: var(--radius-full);
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: var(--trans-quick);
+    }
+    .search-quick-btn:hover { background: var(--accent-hover); box-shadow: 0 0 14px var(--accent-glow); }
+
+    .action-bar-right-controls {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    /* Quality Badge Module */
+    .quality-spec-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-elevated);
+      border-radius: var(--radius-full);
+    }
+    .quality-spec-badge label {
+      font-size: 0.72rem;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      color: var(--accent-cyan);
+      text-transform: uppercase;
+    }
+    .liquid-quality-select {
+      background: transparent;
+      border: none;
+      color: #fff;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      font-weight: 700;
+      outline: none;
+      cursor: pointer;
+    }
+    .liquid-quality-select option {
+      background: #0f172a;
+      color: #fff;
+    }
+
+    /* Master Scrollable Canvas */
+    .cockpit-body-scroll {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 32px 36px calc(var(--player-dock-height) + var(--safe-bottom) + 36px) 36px;
+      display: flex;
+      flex-direction: column;
+      gap: 36px;
+    }
+
+    /* Hero Studio Telemetry Deck */
+    .hero-summary-deck {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 24px;
+    }
+
+    .hero-panel-card {
+      position: relative;
+      background: linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.85) 100%);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 32px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
+    }
+    .hero-panel-card::after {
+      content: '';
+      position: absolute;
+      right: -30px;
+      bottom: -30px;
+      width: 220px;
+      height: 220px;
+      background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-title-tag {
+      font-size: 0.72rem;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .hero-title-tag::before {
+      content: '';
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 10px var(--accent);
+    }
+
+    .hero-big-title {
+      font-size: 2.1rem;
+      font-weight: 800;
+      line-height: 1.2;
+      color: #fff;
+      letter-spacing: -0.03em;
+      margin-top: 10px;
+    }
+
+    .hero-desc {
+      font-size: 0.95rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      max-width: 600px;
+      margin-top: 10px;
+    }
+
+    .hero-status-pills {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 26px;
+      flex-wrap: wrap;
+    }
+
+    .control-pill-btn {
+      padding: 10px 20px;
+      border-radius: var(--radius-full);
+      font-size: 0.85rem;
+      font-weight: 700;
+      border: 1px solid var(--border-elevated);
+      background: rgba(255, 255, 255, 0.05);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      font-family: var(--font-stack);
+      transition: var(--trans-quick);
+      backdrop-filter: blur(12px);
+    }
+    .control-pill-btn:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.3);
+      transform: translateY(-2px);
+    }
+    .control-pill-btn.primary {
+      background: var(--accent);
+      border-color: transparent;
+      box-shadow: 0 4px 18px var(--accent-glow);
+    }
+    .control-pill-btn.primary:hover {
+      background: var(--accent-hover);
+      box-shadow: 0 6px 24px var(--accent-glow);
+    }
+    .control-pill-btn.danger {
+      background: linear-gradient(135deg, #f43f5e, #be123c);
+      border-color: transparent;
+      box-shadow: 0 4px 18px rgba(244, 63, 94, 0.4);
+    }
+
+    /* Telemetry Diagnostics Grid */
+    .hero-stats-card {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 26px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 16px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
+    }
+
+    .stats-row-metric {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .stats-row-metric:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .stats-label {
+      font-size: 0.72rem;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .stats-digit {
+      font-size: 1.4rem;
+      font-weight: 800;
+      font-family: var(--font-mono);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Section Component Layout */
+    .cockpit-section-block {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .cockpit-section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 8px;
+    }
+
+    .section-title-label {
+      font-size: 1.3rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .section-title-label::before {
+      content: '';
+      width: 4px;
+      height: 20px;
+      background: var(--accent);
+      border-radius: 99px;
+      box-shadow: 0 0 12px var(--accent);
+    }
+
+    /* Card Grid Collections */
+    .grid-deck-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+      gap: 18px;
+    }
+
+    .cockpit-card {
+      background: var(--bg-glass-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      cursor: pointer;
+      transition: var(--trans-spring);
+      position: relative;
+      overflow: hidden;
+    }
+    .cockpit-card:hover {
+      background: var(--bg-surface-elevated);
+      border-color: var(--border-elevated);
+      transform: translateY(-4px);
+      box-shadow: 0 16px 32px rgba(0, 0, 0, 0.4);
+    }
+
+    .cockpit-card-icon {
+      width: 46px;
+      height: 46px;
+      border-radius: var(--radius-md);
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 18px;
+      transition: var(--trans-quick);
+    }
+    .cockpit-card-icon svg { width: 22px; height: 22px; fill: var(--text-secondary); transition: var(--trans-quick); }
+
+    .cockpit-card:hover .cockpit-card-icon {
+      background: var(--accent-dim);
+      border-color: var(--border-accent);
+    }
+    .cockpit-card:hover .cockpit-card-icon svg { fill: var(--accent); }
+
+    .cockpit-card.fav-theme .cockpit-card-icon {
+      background: rgba(244, 63, 94, 0.12);
+      border-color: rgba(244, 63, 94, 0.25);
+    }
+    .cockpit-card.fav-theme .cockpit-card-icon svg { fill: var(--accent-rose); }
+
+    .cockpit-card-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #fff;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .cockpit-card-subtitle {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* Track Pipeline Table */
+    .stream-pipeline-table {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .track-row-node {
+      display: grid;
+      grid-template-columns: 46px 1fr 130px 140px 110px;
+      align-items: center;
+      padding: 12px 20px;
+      border-radius: var(--radius-md);
+      background: rgba(15, 23, 42, 0.45);
+      border: 1px solid var(--border-subtle);
+      cursor: pointer;
+      transition: var(--trans-quick);
+    }
+    .track-row-node:hover {
+      background: rgba(30, 41, 59, 0.75);
+      border-color: var(--border-elevated);
+      transform: translateX(4px);
+    }
+    .track-row-node.current-playing {
+      background: linear-gradient(90deg, var(--accent-dim) 0%, rgba(30, 41, 59, 0.8) 100%);
+      border-color: var(--accent);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .track-idx-col {
+      font-size: 0.82rem;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .track-idx-col svg { width: 18px; height: 18px; fill: var(--accent); display: none; }
+    .track-row-node.current-playing .track-idx-col span { display: none; }
+    .track-row-node.current-playing .track-idx-col svg { display: block; }
+
+    .track-meta-col {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      padding-right: 18px;
+    }
+    .track-name-main {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #fff;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .track-row-node.current-playing .track-name-main { color: var(--accent); }
+    .track-subpath {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      margin-top: 3px;
+    }
+
+    .track-codec-col {
+      font-size: 0.7rem;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      color: var(--accent-cyan);
+      background: rgba(6, 182, 212, 0.1);
+      border: 1px solid rgba(6, 182, 212, 0.25);
+      padding: 3px 10px;
+      border-radius: var(--radius-full);
+      width: fit-content;
+      text-transform: uppercase;
+    }
+
+    .track-cache-col {
+      font-size: 0.75rem;
+      font-family: var(--font-mono);
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .status-ping {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--text-muted);
+    }
+    .status-ping.cached {
+      background: var(--accent-emerald);
+      box-shadow: 0 0 10px var(--accent-emerald);
+    }
+
+    .track-actions-col {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+    .action-icon-hit {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 6px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: var(--trans-quick);
+    }
+    .action-icon-hit:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.1);
+    }
+    .action-icon-hit.active-fav {
+      color: var(--accent-rose);
+    }
+    .action-icon-hit svg { width: 18px; height: 18px; fill: currentColor; }
+
+    /* ==========================================================================
+       BOTTOM STUDIO MASTER DOCK (INTEGRATED MEDIA CONTROLS)
+       ========================================================================== */
+    footer.bottom-cockpit-dock {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: calc(var(--player-dock-height) + var(--safe-bottom));
+      padding-bottom: var(--safe-bottom);
+      padding-left: 32px;
+      padding-right: 32px;
+      background: rgba(8, 13, 26, 0.88);
+      backdrop-filter: blur(32px) saturate(200%);
+      -webkit-backdrop-filter: blur(32px) saturate(200%);
+      border-top: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 100;
+      box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.6);
+    }
+
+    .dock-meta-unit {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      width: 28%;
+      overflow: hidden;
+      cursor: pointer;
+    }
+
+    .dock-cover-thumb {
+      width: 56px;
+      height: 56px;
+      border-radius: var(--radius-md);
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-elevated);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      overflow: hidden;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+      position: relative;
+    }
+    .dock-cover-thumb img { width: 100%; height: 100%; object-fit: cover; display: none; }
+    .dock-cover-thumb svg { width: 26px; height: 26px; fill: var(--text-muted); }
+
+    .dock-text-meta { display: flex; flex-direction: column; overflow: hidden; }
+    .dock-track-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #fff;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .dock-track-sub {
+      font-size: 0.76rem;
+      color: var(--accent);
+      font-family: var(--font-mono);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      margin-top: 2px;
+    }
+
+    /* Center Controls Module */
+    .dock-controls-unit {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      width: 44%;
+      max-width: 640px;
+    }
+
+    .dock-buttons-row {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .circle-play-trigger {
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      background: #fff;
+      color: #000;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 4px 20px rgba(255, 255, 255, 0.3);
+      transition: var(--trans-quick);
+    }
+    .circle-play-trigger:hover {
+      transform: scale(1.08);
+      box-shadow: 0 6px 26px rgba(255, 255, 255, 0.5);
+    }
+    .circle-play-trigger svg { width: 22px; height: 22px; fill: currentColor; }
+
+    body.is-premium-tier .circle-play-trigger {
+      background: linear-gradient(135deg, #fbbf24, #d97706);
+      box-shadow: 0 4px 20px var(--accent-glow);
+    }
+
+    .dock-scrub-bar {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .dock-time-stamp {
+      font-size: 0.72rem;
+      font-family: var(--font-mono);
+      color: var(--text-muted);
+      width: 42px;
+      text-align: center;
+    }
+
+    .dock-progress-rail {
+      flex: 1;
+      height: 5px;
+      border-radius: 99px;
+      background: rgba(255, 255, 255, 0.1);
+      position: relative;
+      cursor: pointer;
+      overflow: hidden;
+    }
+    .dock-progress-rail:hover { height: 7px; }
+    .dock-progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent-cyan));
+      border-radius: 99px;
+      width: 0%;
+      transition: width 0.1s linear;
+    }
+
+    /* Right Studio Utilities */
+    .dock-utilities-unit {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 16px;
+      width: 28%;
+    }
+
+    .dock-vol-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 130px;
+    }
+
+    input[type="range"].dock-slider {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.12);
+      height: 4px;
+      border-radius: 99px;
+      outline: none;
+      cursor: pointer;
+    }
+    input[type="range"].dock-slider::-webkit-slider-thumb {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #fff;
+      cursor: pointer;
+      box-shadow: 0 0 8px rgba(0, 0, 0, 0.4);
+      transition: var(--trans-quick);
+    }
+    input[type="range"].dock-slider::-webkit-slider-thumb:hover {
+      transform: scale(1.25);
+    }
+
+    /* Simulated Spectrum Visualizer Widget */
+    .studio-live-spectrum {
+      display: flex;
+      align-items: flex-end;
+      gap: 3px;
+      height: 22px;
+      padding-right: 6px;
+    }
+    .spectrum-bar {
+      width: 3px;
+      background: var(--accent);
+      border-radius: 2px;
+      height: 4px;
+      transition: height 0.15s ease;
+    }
+
+    /* ==========================================================================
+       SPOTLIGHT LYRICS & FULLSCREEN IMMERSIVE STAGE
+       ========================================================================== */
+    #lyrics-fullscreen-overlay {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at center, rgba(15, 23, 42, 0.98) 0%, rgba(3, 7, 18, 0.99) 100%);
+      backdrop-filter: blur(48px);
+      -webkit-backdrop-filter: blur(48px);
+      z-index: 2000;
+      display: none;
+      flex-direction: column;
+      padding: calc(var(--safe-top) + 24px) 50px calc(var(--safe-bottom) + 30px) 50px;
+      animation: modalFadeIn 0.3s ease;
+    }
+    #lyrics-fullscreen-overlay.is-open { display: flex; }
+
+    .lyrics-top-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+    }
+    .lyrics-close-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--border-elevated);
+      border-radius: 50%;
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      cursor: pointer;
+      transition: var(--trans-quick);
+    }
+    .lyrics-close-btn:hover {
+      background: rgba(255, 255, 255, 0.18);
+      transform: rotate(90deg);
+    }
+
+    .lyrics-body-grid {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 1.4fr;
+      gap: 60px;
+      align-items: center;
+      overflow: hidden;
+      max-width: 1200px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .lyrics-cover-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 28px;
+    }
+    .lyrics-album-art {
+      width: 380px;
+      height: 380px;
+      max-width: 75vw;
+      max-height: 75vw;
+      border-radius: var(--radius-lg);
+      object-fit: cover;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7);
+      border: 1px solid var(--border-elevated);
+    }
+
+    .lyrics-interactive-artist {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 18px;
+      margin-top: 10px;
+      border-radius: var(--radius-full);
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border-subtle);
+      color: var(--accent-cyan);
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--trans-quick);
+    }
+    .lyrics-interactive-artist:hover {
+      background: var(--accent-dim);
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+    .lyrics-interactive-artist svg { width: 16px; height: 16px; fill: currentColor; }
+
+    .lyrics-single-spotlight-col {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 40px 30px;
+      position: relative;
+    }
+
+    .spotlight-lyric-text {
+      font-size: 2.6rem;
+      font-weight: 800;
+      line-height: 1.4;
+      color: #ffffff;
+      text-shadow: 0 0 40px var(--accent-glow);
+      transition: var(--trans-spring);
+      max-width: 90%;
+    }
+    .spotlight-lyric-text.animating {
+      opacity: 0.15;
+      transform: scale(0.95) translateY(10px);
+    }
+
+    .spotlight-source-badge {
+      position: absolute;
+      bottom: 24px;
+      font-size: 0.72rem;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      color: var(--text-muted);
+      padding: 6px 16px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-full);
+    }
+
+    /* ==========================================================================
+       MODALS & AUTH STAGES
+       ========================================================================== */
+    #fullscreen-auth-stage {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      background: var(--bg-deep);
+      display: flex;
+      overflow: hidden;
+      opacity: 1;
+      visibility: visible;
+      transition: var(--trans-spring);
+    }
+    #fullscreen-auth-stage.stage-hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .auth-banner-pane {
+      flex: 1.1;
+      background: 
+        radial-gradient(circle at 15% 20%, rgba(59, 130, 246, 0.15) 0%, transparent 60%),
+        radial-gradient(circle at 85% 85%, rgba(6, 182, 212, 0.1) 0%, transparent 60%),
+        #070a13;
+      border-right: 1px solid var(--border-subtle);
+      padding: calc(var(--safe-top) + 60px) 70px 60px 70px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+    }
+
+    .banner-brand-row { display: flex; align-items: center; gap: 14px; }
+    .banner-brand-title { font-size: 1.6rem; font-weight: 800; color: #fff; letter-spacing: -0.03em; }
+    .banner-brand-sub {
+      font-size: 0.7rem;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      color: var(--accent);
+      padding: 4px 10px;
+      background: var(--accent-dim);
+      border: 1px solid var(--border-accent);
+      border-radius: var(--radius-full);
+      letter-spacing: 0.08em;
+    }
+
+    .banner-copy-block {
+      max-width: 560px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      margin: 40px 0;
+    }
+    .banner-headline {
+      font-size: 3.2rem;
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -0.04em;
+      background: linear-gradient(180deg, #ffffff 40%, #94a3b8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .banner-desc { font-size: 1.05rem; color: var(--text-secondary); line-height: 1.6; }
+
+    .telemetry-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-top: 10px;
+    }
+    .telemetry-card {
+      background: rgba(30, 41, 59, 0.4);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      backdrop-filter: blur(10px);
+    }
+    .telemetry-label { font-size: 0.7rem; font-family: var(--font-mono); color: var(--text-muted); text-transform: uppercase; }
+    .telemetry-value { font-size: 1.25rem; font-weight: 800; font-family: var(--font-mono); color: #fff; margin-top: 6px; }
+    .telemetry-value.green { color: var(--accent-emerald); }
+    .telemetry-value.cyan { color: var(--accent-cyan); }
+    .telemetry-value.amber { color: var(--accent); }
+
+    .banner-footer-security { display: flex; align-items: center; gap: 12px; font-size: 0.8rem; color: var(--text-muted); }
+    .security-status-indicator { width: 8px; height: 8px; border-radius: 50%; background: var(--accent-emerald); box-shadow: 0 0 10px var(--accent-emerald); }
+
+    /* Auth Interaction Pane */
+    .auth-interaction-pane {
+      flex: 0.9;
+      background: #090d18;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 40px;
+      position: relative;
+    }
+
+    .auth-console-container {
+      width: 100%;
+      max-width: 420px;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+    .console-header { display: flex; flex-direction: column; gap: 8px; }
+    .console-title { font-size: 1.85rem; font-weight: 800; letter-spacing: -0.03em; color: #fff; }
+    .console-subtitle { font-size: 0.9rem; color: var(--text-secondary); line-height: 1.5; }
+
+    .auth-segmented-switch {
+      display: flex;
+      background: #111726;
+      padding: 4px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-subtle);
+    }
+    .auth-segmented-tab {
+      flex: 1;
+      padding: 10px 0;
+      font-size: 0.86rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      border: none;
+      background: transparent;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-family: var(--font-stack);
+      transition: var(--trans-quick);
+    }
+    .auth-segmented-tab.active {
+      background: var(--bg-surface-elevated);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--border-elevated);
+    }
+
+    .auth-fields-block { display: flex; flex-direction: column; gap: 18px; }
+    .field-group { display: flex; flex-direction: column; gap: 8px; }
+    .field-label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-secondary); }
+    .field-input-box { position: relative; display: flex; align-items: center; }
+    .field-input-box svg { position: absolute; left: 16px; width: 18px; height: 18px; fill: var(--text-muted); }
+
+    .btn-cloud-action {
+      background: linear-gradient(135deg, var(--accent), #1d4ed8);
+      color: #fff;
+      border: none;
+      padding: 14px;
+      border-radius: var(--radius-md);
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 4px 20px var(--accent-glow);
+      transition: var(--trans-quick);
+    }
+    .btn-cloud-action:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 26px var(--accent-glow);
+    }
+
+    .cloud-auth-feedback { min-height: 20px; font-size: 0.82rem; font-family: var(--font-mono); text-align: center; }
+    .cloud-auth-feedback.error { color: var(--accent-rose); }
+    .cloud-auth-feedback.success { color: var(--accent-emerald); }
+
+    /* Generic Dialog Modals */
+    #custom-prompt-modal, #confirm-logout-modal, #artist-picker-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.82);
+      backdrop-filter: blur(20px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 3000;
+      padding: 20px;
+      animation: modalFadeIn 0.25s ease;
+    }
+    #custom-prompt-modal.is-open, #confirm-logout-modal.is-open, #artist-picker-modal.is-open { display: flex; }
+
+    @keyframes modalFadeIn {
+      from { opacity: 0; transform: scale(0.96); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .prompt-box-dialog, .artist-picker-card {
+      background: #0f172a;
+      border: 1px solid var(--border-elevated);
+      border-radius: var(--radius-lg);
+      width: 100%;
+      max-width: 420px;
+      padding: 30px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85);
+    }
+
+    .artist-select-chip {
+      padding: 12px 18px;
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: var(--trans-quick);
+    }
+    .artist-select-chip:hover {
+      background: var(--accent-dim);
+      border-color: var(--accent);
+      color: var(--accent);
+      transform: translateX(4px);
+    }
+
+    /* ==========================================================================
+       RESPONSIVE MATRIX
+       ========================================================================== */
+    @media (max-width: 1024px) {
+      .hero-summary-deck { grid-template-columns: 1fr; }
+      .lyrics-body-grid { grid-template-columns: 1fr; gap: 30px; }
+      .lyrics-album-art { width: 220px; height: 220px; }
+      .spotlight-lyric-text { font-size: 1.8rem; }
+    }
+
+    @media (max-width: 820px) {
+      aside.studio-sidebar {
+        position: fixed;
+        left: -100%;
+        width: 280px;
+        transition: var(--trans-spring);
+      }
+      aside.studio-sidebar.mobile-open {
+        left: 0;
+      }
+      .dock-scrub-bar, .dock-utilities-unit { display: none; }
+      .dock-meta-unit { width: 60%; }
+      .dock-controls-unit { width: 40%; }
+      .track-row-node { grid-template-columns: 36px 1fr 60px 40px; }
+      .track-codec-col { display: none; }
+      .auth-banner-pane { display: none; }
+      .cockpit-body-scroll { padding: 20px 20px 140px 20px; }
+      header.studio-action-bar { padding: var(--safe-top) 20px 0 20px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Ambient Digital Lattice -->
+  <div class="app-ambient-grid"></div>
+
+  <!-- Realtime Notification Hub -->
+  <div id="ui-toast-container"></div>
+
+  <!-- STUDIO WORKSPACE -->
+  <div id="workspace-container">
+    
+    <!-- LEFT EXPANDED STUDIO SIDEBAR -->
+    <aside class="studio-sidebar" id="app-sidebar-nav">
+      <div>
+        <div class="sidebar-brand-block">
+          <div class="brand-cube-badge">
+            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
+          </div>
+          <div class="brand-text-block">
+            <span class="brand-main-title">JRmusic</span>
+            <span class="brand-sub-badge" id="cockpit-tier-label">Cloud Studio</span>
+          </div>
+        </div>
+
+        <nav class="sidebar-menu-list">
+          <div class="menu-group-label">Routing Console</div>
+
+          <!-- 控制台 -->
+          <div class="liquid-nav-item active" id="nav-main-home" onclick="AppNavigation.switchStage('home')">
+            <svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+            <span>Console Master</span>
+          </div>
+
+          <!-- 资源 / 曲库 -->
+          <div class="liquid-nav-item" id="nav-all-musics" onclick="AppNavigation.switchStage('all-musics')">
+            <svg viewBox="0 0 24 24"><path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z"/></svg>
+            <span>Network Library</span>
+          </div>
+
+          <!-- 歌单 -->
+          <div class="liquid-nav-item" id="nav-my-playlists" onclick="AppNavigation.switchStage('my-playlists')">
+            <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+            <span>Playlists Vault</span>
+          </div>
+
+          <!-- 下载 -->
+          <div class="liquid-nav-item" id="nav-offlines" onclick="AppNavigation.switchStage('offlines')">
+            <svg viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
+            <span>Offline Edge</span>
+          </div>
+
+          <!-- 设置 -->
+          <div class="liquid-nav-item" onclick="AuthModalController.handleAvatarClick()">
+            <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+            <span>Account Prefs</span>
+          </div>
+        </nav>
+      </div>
+
+      <!-- Account Profile Tile -->
+      <div class="sidebar-user-card" onclick="AuthModalController.handleAvatarClick()" title="Manage Session">
+        <div class="user-card-profile">
+          <div class="liquid-user-btn" id="user-avatar-initial">?</div>
+          <div class="user-card-info">
+            <span class="user-card-name" id="user-display-name">Not Signed In</span>
+            <span class="user-card-role" id="user-tier-label">Standard</span>
+          </div>
+        </div>
+        <svg width="16" height="16" fill="var(--text-muted)" viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+      </div>
+    </aside>
+
+    <!-- RIGHT WORKSPACE AREA -->
+    <main class="studio-main-body">
+      
+      <!-- TOP ACTION BAR -->
+      <header class="studio-action-bar">
+        <div class="search-dock-module">
+          <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+          <input type="text" id="api-search-input" class="cloud-input" placeholder="Query track title, composer, artist, catalog..." onkeydown="if(event.key==='Enter') MusicAPIEngine.search();" />
+          <button class="search-quick-btn" onclick="MusicAPIEngine.search()">Search</button>
+        </div>
+
+        <div class="action-bar-right-controls">
+          <!-- Audio Pipeline Quality Selector -->
+          <div class="quality-spec-badge" title="Configure dynamic audio codec resolution">
+            <label>Codec</label>
+            <select id="global-quality-selector" class="liquid-quality-select" onchange="MusicAPIEngine.onQualityChanged(this.value)">
+              <option value="standard">128K MP3</option>
+              <option value="exhigh">320K HQ</option>
+              <option value="lossless" selected>FLAC Lossless ★</option>
+              <option value="hires">Hi-Res Master ★</option>
+              <option value="jymaster">JY-Master ★</option>
+            </select>
+          </div>
+        </div>
+      </header>
+
+      <!-- SCROLLABLE INTERACTIVE VIEWPORT -->
+      <div class="cockpit-body-scroll" id="main-scroll-pane">
+        
+        <!-- HERO DIAGNOSTIC CONSOLE -->
+        <section class="hero-summary-deck" id="section-start-listening">
+          <div class="hero-panel-card">
+            <div>
+              <div class="hero-title-tag">Studio Lossless Routing Pipeline</div>
+              <h1 class="hero-big-title">Studio-Grade Audio Streaming.</h1>
+              <p class="hero-desc">
+                High-throughput official CDN transmission pipeline, synchronized spotlight lyrics telemetry, and localized IndexedDB edge persistent caching.
+              </p>
+            </div>
+
+            <div class="hero-status-pills">
+              <button class="control-pill-btn" onclick="TrackListView.renderList('Favorite Musics', PlaybackState.favorites)">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="var(--accent-rose)"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                <span>Favorite Vault (<span id="fav-counter-label">0</span>)</span>
+              </button>
+              <button class="control-pill-btn" onclick="AppNavigation.switchStage('offlines')">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="var(--accent-emerald)"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
+                <span>Offline Edge Vault</span>
+              </button>
+              <button class="control-pill-btn" onclick="MusicAPIEngine.promptDirectParse()">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/></svg>
+                <span>Direct ID Parse</span>
+              </button>
+              <!-- 快捷歌单解析入口 -->
+              <button class="control-pill-btn" onclick="MusicAPIEngine.promptPlaylistParse()" title="输入网易云音乐歌单链接或ID解析全部歌曲">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="var(--accent-cyan)"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+                <span>歌单解析</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="hero-stats-card">
+            <div class="stats-row-metric">
+              <span class="stats-label">Active Connection</span>
+              <span class="stats-digit" id="telemetry-tier-label" style="font-size: 1.15rem; color: var(--accent-cyan);">24-Bit FLAC Lossless</span>
+            </div>
+            <div class="stats-row-metric">
+              <span class="stats-label">Download Quota Balance</span>
+              <span class="stats-digit" id="header-quota-badge">0</span>
+            </div>
+            <div class="stats-row-metric">
+              <span class="stats-label">Worker Edge Nodes</span>
+              <span class="stats-digit" style="color: var(--accent-emerald);">280+ POPs Active</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- STUDIO PRESET COLLECTIONS -->
+        <section class="cockpit-section-block">
+          <div class="cockpit-section-head">
+            <div class="section-title-label">Collections & Local Persistence</div>
+          </div>
+
+          <div class="grid-deck-cards">
+            <div class="cockpit-card fav-theme" onclick="TrackListView.renderList('Favorite Musics', PlaybackState.favorites)">
+              <div class="cockpit-card-icon">
+                <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+              </div>
+              <div class="cockpit-card-title">Favorite Musics</div>
+              <div class="cockpit-card-subtitle">Encrypted personal vault</div>
+            </div>
+
+            <div class="cockpit-card" onclick="AppNavigation.switchStage('offlines')">
+              <div class="cockpit-card-icon">
+                <svg viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
+              </div>
+              <div class="cockpit-card-title">Offline Edge</div>
+              <div class="cockpit-card-subtitle">Local persistent store</div>
+            </div>
+
+            <div class="cockpit-card" onclick="MusicAPIEngine.promptPlaylistParse()">
+              <div class="cockpit-card-icon">
+                <svg viewBox="0 0 24 24"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/></svg>
+              </div>
+              <div class="cockpit-card-title">歌单链接解析</div>
+              <div class="cockpit-card-subtitle">输入 https 链接或 ID 载入</div>
+            </div>
+
+            <div class="cockpit-card" onclick="CustomPlaylistsModule.promptNewPlaylist()">
+              <div class="cockpit-card-icon">
+                <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+              </div>
+              <div class="cockpit-card-title">+ New Playlist</div>
+              <div class="cockpit-card-subtitle">Instantiate new collection</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- TRACK PIPELINE TABLE -->
+        <section class="cockpit-section-block" id="section-track-listing">
+          <div class="cockpit-section-head">
+            <div class="section-title-label" id="listing-heading">Discovered Tracks</div>
+          </div>
+          <div class="stream-pipeline-table" id="track-items-container">
+            <div style="padding: 40px; color: var(--text-muted); text-align: center; font-family: var(--font-mono); font-size: 0.9rem;">
+              Enter a track query in the studio console above to initialize stream pipeline.
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- INTEGRATED BOTTOM AUDIO MASTER DOCK -->
+    <footer class="bottom-cockpit-dock">
+      <div class="dock-meta-unit" onclick="LyricsView.open()" title="Open Spotlight Stage">
+        <div class="dock-cover-thumb" id="player-disc-icon">
+          <img id="player-thumb-img" src="" alt="Album Art" />
+          <svg id="player-thumb-fallback" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 14.5c-2.49 0-4.5-2.01-4.5-4.5S9.51 7.5 12 7.5s4.5 2.01 4.5 4.5-2.01 4.5-4.5 4.5zm0-5.5c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1z"/></svg>
+        </div>
+        <div class="dock-text-meta">
+          <div class="dock-track-title" id="lbl-now-playing-title">Audio Pipeline Standby</div>
+          <div class="dock-track-sub" id="lbl-now-playing-sub">Select a track to initialize decode</div>
+        </div>
+      </div>
+
+      <div class="dock-controls-unit">
+        <div class="dock-buttons-row">
+          <button class="action-icon-hit" onclick="AudioEngine.prevTrack()" title="Previous Track">
+            <svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+          </button>
+          <button class="circle-play-trigger" id="btn-master-play" onclick="AudioEngine.togglePlayState()" title="Toggle Master Stream">
+            <svg viewBox="0 0 24 24" id="play-btn-vector"><path d="M8 5v14l11-7z"/></svg>
+          </button>
+          <button class="action-icon-hit" onclick="AudioEngine.nextTrack()" title="Next Track">
+            <svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+          </button>
+        </div>
+
+        <div class="dock-scrub-bar">
+          <span class="dock-time-stamp" id="lbl-time-elapsed">0:00</span>
+          <div class="dock-progress-rail" id="seek-rail" onclick="AudioEngine.seek(event)">
+            <div class="dock-progress-fill" id="seek-fill"></div>
+          </div>
+          <span class="dock-time-stamp" id="lbl-time-duration">0:00</span>
+        </div>
+      </div>
+
+      <div class="dock-utilities-unit">
+        <!-- Live Visualizer Bars -->
+        <div class="studio-live-spectrum" id="live-spectrum-box">
+          <div class="spectrum-bar" style="height: 4px;"></div>
+          <div class="spectrum-bar" style="height: 12px;"></div>
+          <div class="spectrum-bar" style="height: 8px;"></div>
+          <div class="spectrum-bar" style="height: 16px;"></div>
+          <div class="spectrum-bar" style="height: 6px;"></div>
+        </div>
+
+        <button class="action-icon-hit" title="Lyrics Spotlight Visualizer" onclick="LyricsView.open()">
+          <svg viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+        </button>
+        <button class="action-icon-hit" id="btn-fav-active-track" onclick="AudioEngine.toggleCurrentFavorite()" title="Add to Favorites">
+          <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+        </button>
+        <div class="dock-vol-wrap">
+          <svg width="18" height="18" fill="var(--text-muted)" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
+          <input type="range" class="dock-slider" id="vol-range" min="0" max="1" step="0.01" value="0.8" oninput="AudioEngine.setVolume(this.value)" />
+        </div>
+      </div>
+
+      <!-- Core Audio Sink -->
+      <audio id="core-audio-sink" preload="metadata"></audio>
+    </footer>
+  </div>
+
+  <!-- SPOTLIGHT FULLSCREEN LYRICS OVERLAY -->
+  <div id="lyrics-fullscreen-overlay">
+    <div class="lyrics-top-nav">
+      <button class="lyrics-close-btn" onclick="LyricsView.close()" title="Close Stage">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+      </button>
+      <div style="font-size: 0.95rem; font-weight: 700; color: var(--text-secondary); font-family: var(--font-mono);" id="lyrics-nav-song-name">Lyrics Stage</div>
+      <div style="width: 44px;"></div>
+    </div>
+    
+    <div class="lyrics-body-grid">
+      <div class="lyrics-cover-col">
+        <img class="lyrics-album-art" id="lyrics-hero-cover" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' fill='%23141a24'><rect width='100' height='100'/></svg>" alt="Album Art" />
+        <div style="text-align: center; display: flex; flex-direction: column; align-items: center;">
+          <h2 style="font-size: 1.6rem; color: #fff; font-weight: 800;" id="lyrics-modal-title">Track Title</h2>
+          <div class="lyrics-interactive-artist" id="lyrics-modal-artist-btn" onclick="LyricsView.onArtistClicked()" title="Query all artist tracks">
+            <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+            <span id="lyrics-modal-artist">Artist</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="lyrics-single-spotlight-col">
+        <div class="spotlight-lyric-text" id="lyrics-spotlight-line">Ready for playback...</div>
+        <div class="spotlight-source-badge" id="lyrics-source-badge">LYRICS ENGINE</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MULTI-ARTIST SELECTION MODAL -->
+  <div id="artist-picker-modal">
+    <div class="artist-picker-card">
+      <div style="font-size: 1.25rem; font-weight: 800; color: #fff;">选择歌手检索</div>
+      <div style="font-size: 0.88rem; color: var(--text-secondary);">该曲目包含多位参演艺术家，请选择需要检索的歌手：</div>
+      <div id="artist-chip-container" style="display: flex; flex-direction: column; gap: 8px;"></div>
+      <div style="display: flex; justify-content: flex-end; margin-top: 6px;">
+        <button class="control-pill-btn" onclick="ArtistPicker.close()">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOGOUT CONFIRMATION MODAL -->
+  <div id="confirm-logout-modal">
+    <div class="prompt-box-dialog">
+      <div style="font-size: 1.3rem; font-weight: 800; color: #fff;">確認登出</div>
+      <div style="font-size: 0.92rem; color: var(--text-secondary); line-height: 1.6;">
+        是否確認登出當前帳戶？登出後將立即停止所有音樂播放並返回登入界面。
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 10px;">
+        <button class="control-pill-btn" onclick="AuthModalController.cancelLogout()">取消</button>
+        <button class="control-pill-btn danger" onclick="AuthModalController.confirmLogout()">確認登出</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CUSTOM PROMPT MODAL -->
+  <div id="custom-prompt-modal">
+    <div class="prompt-box-dialog">
+      <div style="font-size: 1.3rem; font-weight: 800; color: #fff;" id="custom-prompt-title">New Playlist</div>
+      <div style="font-size: 0.9rem; color: var(--text-secondary);" id="custom-prompt-desc">Enter a title for your collection:</div>
+      <input type="text" class="cloud-input" id="custom-prompt-input" style="padding-left: 18px;" />
+      <div style="display: flex; justify-content: flex-end; gap: 12px;">
+        <button class="control-pill-btn" onclick="CustomPrompt.cancel()">Cancel</button>
+        <button class="control-pill-btn primary" onclick="CustomPrompt.confirm()">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FULLSCREEN AUTHENTICATION GATEWAY -->
+  <div id="fullscreen-auth-stage">
+    <div class="auth-banner-pane">
+      <div>
+        <div class="banner-brand-row">
+          <div class="brand-cube-badge">
+            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
+          </div>
+          <div>
+            <span class="banner-brand-title">JRmusic Cloud</span>
+            <span class="banner-brand-sub" id="auth-tier-badge">STANDARD PIPELINE</span>
+          </div>
+        </div>
+
+        <div class="banner-copy-block">
+          <h1 class="banner-headline">Enterprise Lossless Audio Network.</h1>
+          <p class="banner-desc">
+            Direct Netease API decoding, fast official CDN streams, and localized IndexedDB persistent cache.
+          </p>
+        </div>
+      </div>
+
+      <div>
+        <div class="telemetry-grid">
+          <div class="telemetry-card">
+            <div class="telemetry-label">Network Edge</div>
+            <div class="telemetry-value green">280+ POPs</div>
+          </div>
+          <div class="telemetry-card">
+            <div class="telemetry-label">Local Cache</div>
+            <div class="telemetry-value cyan">IndexedDB</div>
+          </div>
+          <div class="telemetry-card">
+            <div class="telemetry-label">Audio Tier</div>
+            <div class="telemetry-value amber">FLAC Lossless</div>
+          </div>
+        </div>
+
+        <div class="banner-footer-security" style="margin-top: 36px;">
+          <div class="security-status-indicator"></div>
+          <span>Cloudflare Workers & Render Infrastructure · Local Persistence Ready</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="auth-interaction-pane">
+      <div class="auth-console-container">
+        <div class="console-header">
+          <div class="console-title" id="auth-modal-title">Sign in to JRmusic</div>
+          <div class="console-subtitle" id="auth-modal-desc">Authenticate to synchronize remote catalogs and access offline licenses.</div>
+        </div>
+
+        <div class="auth-segmented-switch">
+          <button class="auth-segmented-tab active" id="tab-btn-login" onclick="AuthModalController.switchTab('login')">Sign In</button>
+          <button class="auth-segmented-tab" id="tab-btn-register" onclick="AuthModalController.switchTab('register')">Register</button>
+          <button class="auth-segmented-tab" id="tab-btn-redeem" onclick="AuthModalController.switchTab('redeem')">Redeem Key</button>
+        </div>
+
+        <div class="auth-fields-block">
+          <div id="auth-credentials-group" style="display: flex; flex-direction: column; gap: 16px;">
+            <div class="field-group">
+              <label class="field-label">Username</label>
+              <div class="field-input-box">
+                <input type="text" class="cloud-input" id="auth-input-user" placeholder="Enter corporate ID" />
+                <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+              </div>
+            </div>
+
+            <div class="field-group">
+              <label class="field-label">Password</label>
+              <div class="field-input-box">
+                <input type="password" class="cloud-input" id="auth-input-pass" placeholder="••••••••••••" />
+                <svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+              </div>
+            </div>
+
+            <button class="btn-cloud-action" id="btn-auth-primary-submit" onclick="AuthModalController.handlePrimaryAuth()">
+              <span>Sign In to JRmusic</span>
+            </button>
+          </div>
+
+          <div id="auth-redeem-group" style="display: none; flex-direction: column; gap: 16px;">
+            <div class="field-group">
+              <label class="field-label">Activation License Key</label>
+              <div class="field-input-box">
+                <input type="text" class="cloud-input" id="auth-input-license" placeholder="e.g. VIP-PREMIUM-2026" />
+                <svg viewBox="0 0 24 24"><path d="M7 11h2v2H7zm0 4h2v2H7zm4-4h2v2h-2zm0 4h2v2h-2zm4-4h2v2h-2zm0 4h2v2h-2zM20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 18H4V4h16v16z"/></svg>
+              </div>
+            </div>
+
+            <button class="btn-cloud-action" onclick="AuthModalController.handleRedeem()">
+              <span>Activate License Key</span>
+            </button>
+          </div>
+
+          <div class="cloud-auth-feedback" id="auth-feedback-text"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       JAVASCRIPT LOGIC ENGINE
+       ========================================================================== -->
+  <script>
+    const CONFIG = {
+      WORKER_API_BASE: "https://jrmusic-premium.zhangzhanhang855.workers.dev",
+      BACKEND_API_BASE: "https://neteasemusicdl.onrender.com",
+      DEFAULT_DOWNLOAD_QUOTA: 10,
+      DB_NAME: "JRMusicOfflineStore",
+      DB_VERSION: 2,
+      PREMIUM_QUALITIES: ['lossless', 'hires', 'jymaster', 'sky', 'dolby']
+    };
+
+    const UIToast = {
+      show(message, type = 'info', duration = 3200) {
+        const container = document.getElementById("ui-toast-container");
+        const toast = document.createElement("div");
+        toast.className = `ui-toast ${type}`;
+
+        let iconSvg = '';
+        if (type === 'success') {
+          iconSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="#10b981"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>`;
+        } else if (type === 'error') {
+          iconSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="#ff4757"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>`;
+        } else {
+          iconSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="var(--accent)"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>`;
+        }
+
+        toast.innerHTML = `${iconSvg}<div style="flex:1;">${message}</div>`;
+        container.appendChild(toast);
+
+        setTimeout(() => {
+          toast.classList.add("toast-fade-out");
+          setTimeout(() => {
+            if (toast.parentNode) toast.parentNode.removeChild(toast);
+          }, 300);
+        }, duration);
+      }
+    };
+
+    const CustomPrompt = {
+      resolver: null,
+      show(title, desc, defaultVal = '') {
+        return new Promise((resolve) => {
+          CustomPrompt.resolver = resolve;
+          document.getElementById("custom-prompt-title").innerText = title;
+          document.getElementById("custom-prompt-desc").innerText = desc;
+          const input = document.getElementById("custom-prompt-input");
+          input.value = defaultVal;
+          document.getElementById("custom-prompt-modal").classList.add("is-open");
+          input.focus();
+        });
+      },
+      confirm() {
+        const val = document.getElementById("custom-prompt-input").value;
+        document.getElementById("custom-prompt-modal").classList.remove("is-open");
+        if (CustomPrompt.resolver) CustomPrompt.resolver(val);
+        CustomPrompt.resolver = null;
+      },
+      cancel() {
+        document.getElementById("custom-prompt-modal").classList.remove("is-open");
+        if (CustomPrompt.resolver) CustomPrompt.resolver(null);
+        CustomPrompt.resolver = null;
+      }
+    };
+
+    const ArtistPicker = {
+      show(artistList) {
+        const container = document.getElementById("artist-chip-container");
+        container.innerHTML = "";
+        artistList.forEach(name => {
+          const chip = document.createElement("div");
+          chip.className = "artist-select-chip";
+          chip.innerHTML = `
+            <span>${name}</span>
+            <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+          `;
+          chip.onclick = () => {
+            ArtistPicker.close();
+            LyricsView.close();
+            MusicAPIEngine.searchArtist(name);
+          };
+          container.appendChild(chip);
+        });
+        document.getElementById("artist-picker-modal").classList.add("is-open");
+      },
+      close() {
+        document.getElementById("artist-picker-modal").classList.remove("is-open");
+      }
+    };
+
+    const OfflineAudioStore = {
+      db: null,
+
+      async init() {
+        return new Promise((resolve, reject) => {
+          const req = indexedDB.open(CONFIG.DB_NAME, CONFIG.DB_VERSION);
+          req.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains("audio_blobs")) {
+              db.createObjectStore("audio_blobs", { keyPath: "id" });
+            }
+          };
+          req.onsuccess = (e) => {
+            OfflineAudioStore.db = e.target.result;
+            OfflineAudioStore.refreshCatalog().then(resolve);
+          };
+          req.onerror = (err) => reject(err);
+        });
+      },
+
+      async saveTrackBlob(trackObj, blob) {
+        return new Promise((resolve, reject) => {
+          const tx = OfflineAudioStore.db.transaction(["audio_blobs"], "readwrite");
+          const store = tx.objectStore("audio_blobs");
+          const record = {
+            id: String(trackObj.id),
+            title: trackObj.title,
+            artist: trackObj.artist,
+            album: trackObj.album,
+            picUrl: trackObj.picUrl,
+            quality: trackObj.quality || 'lossless',
+            lyric: trackObj.lyric || '',
+            tlyric: trackObj.tlyric || '',
+            blob: blob,
+            timestamp: Date.now()
+          };
+          store.put(record);
+          tx.oncomplete = () => {
+            PlaybackState.offlineCacheCatalog.add(String(trackObj.id));
+            resolve();
+          };
+          tx.onerror = (err) => reject(err);
+        });
+      },
+
+      async getTrackRecord(songId) {
+        return new Promise((resolve) => {
+          const tx = OfflineAudioStore.db.transaction(["audio_blobs"], "readonly");
+          const store = tx.objectStore("audio_blobs");
+          const req = store.get(String(songId));
+          req.onsuccess = () => resolve(req.result || null);
+          req.onerror = () => resolve(null);
+        });
+      },
+
+      async getAllCachedRecords() {
+        return new Promise((resolve) => {
+          const tx = OfflineAudioStore.db.transaction(["audio_blobs"], "readonly");
+          const store = tx.objectStore("audio_blobs");
+          const req = store.getAll();
+          req.onsuccess = () => resolve(req.result || []);
+          req.onerror = () => resolve([]);
+        });
+      },
+
+      async refreshCatalog() {
+        const records = await OfflineAudioStore.getAllCachedRecords();
+        PlaybackState.offlineCacheCatalog.clear();
+        records.forEach(r => PlaybackState.offlineCacheCatalog.add(String(r.id)));
+      }
+    };
+
+    const MetaParser = {
+      lrctrim(lyrics) {
+        if (!lyrics) return [];
+        const lines = lyrics.split('\\n');
+        const data = [];
+
+        lines.forEach((line, index) => {
+          const matches = line.match(/\\[(\\d{2}):(\\d{2}[\\.:]?\\d*)]/);
+          if (matches) {
+            const minutes = parseInt(matches[1], 10);
+            const seconds = parseFloat(matches[2].replace('.', ':')) || 0;
+            const timestamp = minutes * 60 + seconds;
+            let text = line.replace(/\\[\\d{2}:\\d{2}[\\.:]?\\d*\\]/g, '').trim();
+            data.push({ time: timestamp, index, text });
+          }
+        });
+        data.sort((a, b) => a.time - b.time);
+        return data;
+      },
+
+      lrctran(lyric, tlyric) {
+        let base = MetaParser.lrctrim(lyric);
+        let trans = MetaParser.lrctrim(tlyric);
+
+        if (!trans || trans.length === 0) return base;
+
+        let len1 = base.length;
+        let len2 = trans.length;
+
+        for (let i = 0, j = 0; i < len1 && j < len2; i++) {
+          while (base[i].time > trans[j].time && j + 1 < len2) {
+            j++;
+          }
+          if (Math.abs(base[i].time - trans[j].time) < 0.5) {
+            const tText = trans[j].text.replace('/', '').trim();
+            if (tText) {
+              base[i].text += ` (${tText})`;
+            }
+            j++;
+          }
+        }
+        return base;
+      },
+
+      parseFullLyrics(lrcRaw, tLrcRaw) {
+        const badgeEl = document.getElementById("lyrics-source-badge");
+        if (!lrcRaw) {
+          PlaybackState.activeLyrics = [];
+          PlaybackState.currentLyricIndex = -1;
+          if (badgeEl) badgeEl.innerText = "INSTRUMENTAL";
+          LyricsView.renderSpotlightText("Instrumental / No Lyrics");
+          return;
+        }
+
+        const merged = MetaParser.lrctran(lrcRaw, tLrcRaw);
+        if (merged.length > 0) {
+          PlaybackState.activeLyrics = merged;
+          PlaybackState.currentLyricIndex = -1;
+          if (badgeEl) badgeEl.innerText = "SYNCED LYRICS";
+          LyricsView.renderSpotlightText(merged[0].text || "Ready for playback...");
+        } else {
+          PlaybackState.activeLyrics = [];
+          PlaybackState.currentLyricIndex = -1;
+          if (badgeEl) badgeEl.innerText = "TEXT ONLY";
+          LyricsView.renderSpotlightText(lrcRaw.substring(0, 100));
+        }
+      }
+    };
+
+    const PlaybackState = {
+      currentUser: null,
+      sessionToken: null,
+      quotaRemainder: 0,
+      currentQuality: 'lossless',
+      flatTrackIndex: [],
+      currentPlaylist: [],
+      currentTrackPointer: -1,
+      favorites: [],
+      customPlaylists: [
+        { name: "Playlist 1", tracks: [] },
+        { name: "Playlist 2", tracks: [] }
+      ],
+      offlineCacheCatalog: new Set(),
+      activeLyrics: [],
+      currentLyricIndex: -1,
+      activeCoverUrl: null
+    };
+
+    const MusicAPIEngine = {
+      onQualityChanged(val) {
+        if (CONFIG.PREMIUM_QUALITIES.includes(val) && (!PlaybackState.currentUser || !PlaybackState.currentUser.isPremium)) {
+          UIToast.show(`[${val.toUpperCase()}] 为 Premium 独享音质！请先兑换会员码。`, "error");
+          document.getElementById("global-quality-selector").value = 'exhigh';
+          PlaybackState.currentQuality = 'exhigh';
+          AuthModalController.openModal('redeem');
+          return;
+        }
+
+        PlaybackState.currentQuality = val;
+        UIToast.show(`已切换目标音质: ${val.toUpperCase()}`, "info");
+      },
+
+      async search() {
+        const keyword = document.getElementById("api-search-input").value.trim();
+        if (!keyword) {
+          UIToast.show("Please enter a search keyword", "error");
+          return;
+        }
+        await MusicAPIEngine.executeSearch(keyword);
+      },
+
+      async searchArtist(artistName) {
+        document.getElementById("api-search-input").value = artistName;
+        AppNavigation.switchStage('home');
+        await MusicAPIEngine.executeSearch(artistName);
+        UIToast.show(`已显示歌手【${artistName}】的所有曲目`, "success");
+      },
+
+      async executeSearch(keyword) {
+        UIToast.show(`Searching for "${keyword}"...`, "info");
+        try {
+          const formData = new FormData();
+          formData.append("keyword", keyword);
+          formData.append("limit", "30");
+
+          const res = await fetch(`${CONFIG.BACKEND_API_BASE}/Search`, {
+            method: "POST",
+            body: formData
+          });
+          const json = await res.json();
+
+          if (json.status === 200 && Array.isArray(json.data)) {
+            const tracks = json.data.map(item => ({
+              id: String(item.id),
+              title: item.name,
+              artist: item.artists,
+              album: item.album,
+              picUrl: item.picUrl,
+              level: PlaybackState.currentQuality
+            }));
+
+            PlaybackState.flatTrackIndex = tracks;
+            TrackListView.renderList(`Search: ${keyword}`, tracks);
+            UIToast.show(`Found ${tracks.length} tracks`, "success");
+          } else {
+            UIToast.show("No matching tracks returned from API", "error");
+          }
+        } catch (err) {
+          UIToast.show(`Search API Error: ${err.message}`, "error");
+        }
+      },
+
+      async resolveSongStream(songId, level = null) {
+        const targetLevel = level || PlaybackState.currentQuality;
+        const formData = new FormData();
+        formData.append("url", songId);
+        formData.append("level", targetLevel);
+        formData.append("type", "json");
+
+        const res = await fetch(`${CONFIG.BACKEND_API_BASE}/Song_V1`, {
+          method: "POST",
+          body: formData
+        });
+        const json = await res.json();
+        if (json.status === 200 && json.data) {
+          return json.data;
+        }
+        throw new Error(json.data ? json.data.msg : "Failed to resolve stream");
+      },
+
+      async downloadDirect(songId) {
+        if (!PlaybackState.currentUser) {
+          AuthModalController.openModal('login');
+          return;
+        }
+
+        if (PlaybackState.offlineCacheCatalog.has(String(songId))) {
+          UIToast.show("Track is already stored in local IndexedDB vault.", "info");
+          return;
+        }
+
+        const quality = PlaybackState.currentQuality;
+
+        if (CONFIG.PREMIUM_QUALITIES.includes(quality) && !PlaybackState.currentUser.isPremium) {
+          UIToast.show(`下载 [${quality.toUpperCase()}] 需 Premium 会员！`, "error");
+          AuthModalController.openModal('redeem');
+          return;
+        }
+
+        if (PlaybackState.quotaRemainder <= 0) {
+          UIToast.show("Download quota depleted! Please redeem an activation license.", "error");
+          AuthModalController.openModal('redeem');
+          return;
+        }
+
+        UIToast.show(`Requesting high-speed stream (${quality.toUpperCase()})...`, "info");
+
+        try {
+          const streamData = await MusicAPIEngine.resolveSongStream(songId, quality);
+          if (!streamData || !streamData.url) {
+            throw new Error("Unable to obtain official download URL");
+          }
+
+          UIToast.show(`Fetching stream directly from CDN...`, "info");
+
+          const audioRes = await fetch(streamData.url);
+          if (!audioRes.ok) throw new Error("Audio stream transmission interrupted");
+          const blob = await audioRes.blob();
+
+          const trackRecord = {
+            id: String(songId),
+            title: streamData.name,
+            artist: streamData.ar_name,
+            album: streamData.al_name,
+            picUrl: streamData.pic,
+            quality: quality,
+            lyric: streamData.lyric,
+            tlyric: streamData.tlyric
+          };
+
+          await OfflineAudioStore.saveTrackBlob(trackRecord, blob);
+
+          PlaybackState.quotaRemainder--;
+          localStorage.setItem("jrmusic_quota", PlaybackState.quotaRemainder.toString());
+          UIFeedback.updateQuotaVisuals();
+          TrackListView.refreshCurrentView();
+
+          UIToast.show(`Downloaded "${streamData.name}"! (${PlaybackState.quotaRemainder} quota remaining)`, "success");
+        } catch (e) {
+          UIToast.show(`Download failed: ${e.message}`, "error");
+        }
+      },
+
+      async promptDirectParse() {
+        const idOrUrl = await CustomPrompt.show("Direct Parse", "Enter Netease Song ID or Web Link:", "");
+        if (!idOrUrl) return;
+
+        let songId = idOrUrl.trim();
+        const idMatch = songId.match(/id=(\\d+)/);
+        if (idMatch) songId = idMatch[1];
+
+        UIToast.show(`Resolving audio asset #${songId}...`, "info");
+        try {
+          const streamData = await MusicAPIEngine.resolveSongStream(songId, PlaybackState.currentQuality);
+          const track = {
+            id: String(songId),
+            title: streamData.name,
+            artist: streamData.ar_name,
+            album: streamData.al_name,
+            picUrl: streamData.pic,
+            resolvedUrl: streamData.url,
+            lyric: streamData.lyric,
+            tlyric: streamData.tlyric
+          };
+          PlaybackState.currentPlaylist = [track];
+          PlaybackState.currentTrackPointer = 0;
+          AudioEngine.loadAndPlay(track);
+        } catch (e) {
+          UIToast.show(e.message, "error");
+        }
+      },
+
+      /**
+       * 新增：用户输入网易云音乐歌单链接或 ID 并解析
+       */
+      async promptPlaylistParse() {
+        const inputStr = await CustomPrompt.show(
+          "歌单链接解析",
+          "输入网易云歌单链接 (https://music.163.com/playlist?id=...) 或歌单ID：",
+          ""
+        );
+        if (!inputStr) return;
+
+        let playlistId = inputStr.trim();
+        // 自动正则提取 URL 中的 ID
+        const match = playlistId.match(/[?&]id=(\\d+)/) || playlistId.match(/\\/playlist\\/(\\d+)/) || playlistId.match(/(\\d+)/);
+        if (match) {
+          playlistId = match[1];
+        }
+
+        if (!playlistId || !/^\\d+$/.test(playlistId)) {
+          UIToast.show("无法识别有效的歌单 ID 或链接，请重试！", "error");
+          return;
+        }
+
+        await MusicAPIEngine.resolvePlaylist(playlistId);
+      },
+
+      async resolvePlaylist(playlistId) {
+        UIToast.show(`正在请求歌单 #${playlistId} 数据...`, "info");
+        try {
+          // 根据后端文档支持 POST /playlist 或兼容大小写 /Playlist
+          // 多数后端支持 JSON 或 Form 传递
+          let res = await fetch(`${CONFIG.BACKEND_API_BASE}/playlist`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ id: playlistId })
+          }).catch(() => null);
+
+          // 备用兼容：若后端严格要求 FormData / 大写路由
+          if (!res || !res.ok) {
+            const formData = new FormData();
+            formData.append("id", playlistId);
+            res = await fetch(`${CONFIG.BACKEND_API_BASE}/Playlist`, {
+              method: "POST",
+              body: formData
+            });
+          }
+
+          const json = await res.json();
+          if (json.status === 200 && json.data && json.data.playlist) {
+            const pl = json.data.playlist;
+            const tracks = (pl.tracks || []).map(item => ({
+              id: String(item.id),
+              title: item.name,
+              artist: item.artists || "Various Artists",
+              album: item.album || pl.name,
+              picUrl: item.picUrl || pl.coverImgUrl,
+              level: PlaybackState.currentQuality
+            }));
+
+            if (tracks.length === 0) {
+              UIToast.show(`歌单「${pl.name}」中未包含有效曲目`, "error");
+              return;
+            }
+
+            PlaybackState.flatTrackIndex = tracks;
+            PlaybackState.currentPlaylist = tracks;
+            PlaybackState.currentTrackPointer = 0;
+
+            AppNavigation.switchStage('home');
+            TrackListView.renderList(`歌单: ${pl.name} (${tracks.length} 首)`, tracks);
+            UIToast.show(`成功载入「${pl.name}」，共 ${tracks.length} 首！`, "success");
+          } else {
+            throw new Error((json && json.message) || "获取歌单失败，请检查歌单链接或权限");
+          }
+        } catch (err) {
+          console.error("Playlist Parse Error:", err);
+          UIToast.show(`歌单解析失败: ${err.message}`, "error");
+        }
+      }
+    };
+
+    const LyricsView = {
+      open() {
+        if (!AudioEngine.currentTrack) {
+          UIToast.show("No audio is currently playing", "info");
+          return;
+        }
+        document.getElementById("lyrics-fullscreen-overlay").classList.add("is-open");
+        document.getElementById("lyrics-nav-song-name").innerText = AudioEngine.currentTrack.title;
+        document.getElementById("lyrics-modal-title").innerText = AudioEngine.currentTrack.title;
+        document.getElementById("lyrics-modal-artist").innerText = AudioEngine.currentTrack.artist || "JRmusic Cloud";
+        
+        const coverEl = document.getElementById("lyrics-hero-cover");
+        coverEl.src = PlaybackState.activeCoverUrl || AudioEngine.currentTrack.picUrl || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='300' fill='%23141a24'><rect width='300' height='300'/></svg>";
+
+        if (PlaybackState.currentLyricIndex >= 0 && PlaybackState.activeLyrics[PlaybackState.currentLyricIndex]) {
+          LyricsView.renderSpotlightText(PlaybackState.activeLyrics[PlaybackState.currentLyricIndex].text);
+        } else if (PlaybackState.activeLyrics.length > 0) {
+          LyricsView.renderSpotlightText(PlaybackState.activeLyrics[0].text);
+        } else {
+          LyricsView.renderSpotlightText("Ready for playback...");
+        }
+      },
+
+      close() {
+        document.getElementById("lyrics-fullscreen-overlay").classList.remove("is-open");
+      },
+
+      onArtistClicked() {
+        if (!AudioEngine.currentTrack || !AudioEngine.currentTrack.artist) return;
+        const rawArtist = AudioEngine.currentTrack.artist;
+        const artists = rawArtist.split(/[\\/、,&]/).map(s => s.trim()).filter(Boolean);
+
+        if (artists.length <= 1) {
+          LyricsView.close();
+          MusicAPIEngine.searchArtist(artists[0] || rawArtist);
+        } else {
+          ArtistPicker.show(artists);
+        }
+      },
+
+      renderSpotlightText(text) {
+        const lineEl = document.getElementById("lyrics-spotlight-line");
+        if (!lineEl) return;
+        lineEl.classList.add("animating");
+        setTimeout(() => {
+          lineEl.innerText = text || "♫ ...";
+          lineEl.classList.remove("animating");
+        }, 150);
+      },
+
+      updateHighlight(currentTime) {
+        if (!PlaybackState.activeLyrics || PlaybackState.activeLyrics.length === 0) return;
+
+        let activeIdx = -1;
+        for (let i = 0; i < PlaybackState.activeLyrics.length; i++) {
+          if (currentTime >= PlaybackState.activeLyrics[i].time) {
+            activeIdx = i;
+          } else {
+            break;
+          }
+        }
+
+        if (activeIdx !== PlaybackState.currentLyricIndex && activeIdx !== -1) {
+          PlaybackState.currentLyricIndex = activeIdx;
+          const currentText = PlaybackState.activeLyrics[activeIdx].text;
+          document.getElementById("lbl-now-playing-sub").innerText = currentText;
+          MediaSessionController.updateCurrentLyric(currentText);
+          LyricsView.renderSpotlightText(currentText);
+        }
+      }
+    };
+
+    const MediaSessionController = {
+      init() {
+        if ('mediaSession' in navigator) {
+          navigator.mediaSession.setActionHandler('play', () => AudioEngine.togglePlayState());
+          navigator.mediaSession.setActionHandler('pause', () => AudioEngine.togglePlayState());
+          navigator.mediaSession.setActionHandler('previoustrack', () => AudioEngine.prevTrack());
+          navigator.mediaSession.setActionHandler('nexttrack', () => AudioEngine.nextTrack());
+          navigator.mediaSession.setActionHandler('seekto', (details) => {
+            if (details.seekTime && AudioEngine.sink.duration) {
+              AudioEngine.sink.currentTime = details.seekTime;
+            }
+          });
+        }
+      },
+
+      updateMetadata(track, coverUrl) {
+        if ('mediaSession' in navigator) {
+          const artwork = [];
+          if (coverUrl) {
+            artwork.push({ src: coverUrl, sizes: '512x512', type: 'image/jpeg' });
+          }
+
+          navigator.mediaSession.metadata = new MediaMetadata({
+            title: track.title,
+            artist: track.artist || "JRmusic Cloud",
+            album: track.album || "Lossless Enterprise",
+            artwork: artwork
+          });
+        }
+      },
+
+      updateCurrentLyric(lyricText) {
+        if ('mediaSession' in navigator && navigator.mediaSession.metadata) {
+          navigator.mediaSession.metadata.artist = lyricText;
+        }
+      }
+    };
+
+    const AudioEngine = {
+      sink: document.getElementById("core-audio-sink"),
+      currentTrack: null,
+
+      init() {
+        this.sink.ontimeupdate = this.onTimeUpdate;
+        this.sink.onended = this.nextTrack;
+        this.sink.onerror = () => {
+          UIToast.show("Audio stream playback encountered an error", "error");
+        };
+        MediaSessionController.init();
+      },
+
+      stopAll() {
+        if (this.sink) {
+          this.sink.pause();
+          this.sink.removeAttribute('src');
+          this.sink.load();
+        }
+        this.currentTrack = null;
+        this.updatePlayBtnIcon(false);
+        document.getElementById("lbl-now-playing-title").innerText = "Audio Pipeline Standby";
+        document.getElementById("lbl-now-playing-sub").innerText = "Select track to initialize decode";
+        document.getElementById("lbl-time-elapsed").innerText = "0:00";
+        document.getElementById("lbl-time-duration").innerText = "0:00";
+        document.getElementById("seek-fill").style.width = "0%";
+        const thumbImg = document.getElementById("player-thumb-img");
+        const thumbFallback = document.getElementById("player-thumb-fallback");
+        thumbImg.style.display = "none";
+        thumbFallback.style.display = "block";
+        document.querySelectorAll(".track-row-node").forEach(el => el.classList.remove("current-playing"));
+      },
+
+      async loadAndPlay(track) {
+        if (!PlaybackState.currentUser) {
+          AuthModalController.openModal('login');
+          return;
+        }
+
+        if (CONFIG.PREMIUM_QUALITIES.includes(PlaybackState.currentQuality) && !PlaybackState.currentUser.isPremium) {
+          UIToast.show(`当前音质 [${PlaybackState.currentQuality.toUpperCase()}] 为 Premium 独享，请兑换会员码。`, "error");
+          AuthModalController.openModal('redeem');
+          return;
+        }
+
+        this.currentTrack = track;
+        document.getElementById("lbl-now-playing-title").innerText = track.title;
+        document.getElementById("lbl-now-playing-sub").innerText = "Checking local persistence...";
+
+        PlaybackState.activeLyrics = [];
+        PlaybackState.currentLyricIndex = -1;
+        PlaybackState.activeCoverUrl = track.picUrl || null;
+        LyricsView.renderSpotlightText("Syncing lyrics...");
+
+        const thumbImg = document.getElementById("player-thumb-img");
+        const thumbFallback = document.getElementById("player-thumb-fallback");
+
+        if (track.picUrl) {
+          thumbImg.src = track.picUrl;
+          thumbImg.style.display = "block";
+          thumbFallback.style.display = "none";
+        } else {
+          thumbImg.style.display = "none";
+          thumbFallback.style.display = "block";
+        }
+
+        try {
+          const localRecord = await OfflineAudioStore.getTrackRecord(track.id);
+
+          if (localRecord && localRecord.blob) {
+            document.getElementById("lbl-now-playing-sub").innerText = `Offline Edge Mode · [${(localRecord.quality || 'LOSSLESS').toUpperCase()}]`;
+            this.sink.src = URL.createObjectURL(localRecord.blob);
+            MetaParser.parseFullLyrics(localRecord.lyric, localRecord.tlyric);
+          } else {
+            let playUrl = track.resolvedUrl;
+            let lyric = track.lyric;
+            let tlyric = track.tlyric;
+
+            if (!playUrl || track.level !== PlaybackState.currentQuality) {
+              const streamData = await MusicAPIEngine.resolveSongStream(track.id, PlaybackState.currentQuality);
+              playUrl = streamData.url;
+              lyric = streamData.lyric;
+              tlyric = streamData.tlyric;
+              track.resolvedUrl = playUrl;
+              track.artist = streamData.ar_name || track.artist;
+              track.album = streamData.al_name || track.album;
+              track.picUrl = streamData.pic || track.picUrl;
+              track.level = PlaybackState.currentQuality;
+              PlaybackState.activeCoverUrl = track.picUrl;
+              if (track.picUrl) {
+                thumbImg.src = track.picUrl;
+                thumbImg.style.display = "block";
+                thumbFallback.style.display = "none";
+              }
+            }
+
+            if (!playUrl) throw new Error("Empty audio stream link returned");
+
+            document.getElementById("lbl-now-playing-sub").innerText = `Live Cloud Stream · [${PlaybackState.currentQuality.toUpperCase()}]`;
+            this.sink.src = playUrl;
+            MetaParser.parseFullLyrics(lyric, tlyric);
+          }
+
+          await this.sink.play();
+          this.updatePlayBtnIcon(true);
+          MediaSessionController.updateMetadata(track, PlaybackState.activeCoverUrl);
+        } catch (err) {
+          UIToast.show(err.message, "error");
+          this.updatePlayBtnIcon(false);
+        }
+
+        document.querySelectorAll(".track-row-node").forEach(el => el.classList.remove("current-playing"));
+      },
+
+      togglePlayState() {
+        if (!PlaybackState.currentUser) {
+          AuthModalController.openModal('login');
+          return;
+        }
+        if (!this.sink.src) return;
+        if (this.sink.paused) {
+          this.sink.play();
+          this.updatePlayBtnIcon(true);
+        } else {
+          this.sink.pause();
+          this.updatePlayBtnIcon(false);
+        }
+      },
+
+      updatePlayBtnIcon(isPlaying) {
+        const svg = document.getElementById("play-btn-vector");
+        if (isPlaying) {
+          svg.innerHTML = `<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>`;
+        } else {
+          svg.innerHTML = `<path d="M8 5v14l11-7z"/>`;
+        }
+      },
+
+      nextTrack() {
+        if (PlaybackState.currentPlaylist.length === 0) return;
+        PlaybackState.currentTrackPointer = (PlaybackState.currentTrackPointer + 1) % PlaybackState.currentPlaylist.length;
+        AudioEngine.loadAndPlay(PlaybackState.currentPlaylist[PlaybackState.currentTrackPointer]);
+      },
+
+      prevTrack() {
+        if (PlaybackState.currentPlaylist.length === 0) return;
+        PlaybackState.currentTrackPointer = (PlaybackState.currentTrackPointer - 1 + PlaybackState.currentPlaylist.length) % PlaybackState.currentPlaylist.length;
+        AudioEngine.loadAndPlay(PlaybackState.currentPlaylist[PlaybackState.currentTrackPointer]);
+      },
+
+      onTimeUpdate() {
+        const curr = AudioEngine.sink.currentTime || 0;
+        const dur = AudioEngine.sink.duration || 0;
+        document.getElementById("lbl-time-elapsed").innerText = AudioEngine.formatTime(curr);
+        document.getElementById("lbl-time-duration").innerText = AudioEngine.formatTime(dur);
+
+        if (dur > 0) {
+          const pct = (curr / dur) * 100;
+          document.getElementById("seek-fill").style.width = pct + "%";
+        }
+
+        LyricsView.updateHighlight(curr);
+      },
+
+      seek(e) {
+        const rail = document.getElementById("seek-rail");
+        const rect = rail.getBoundingClientRect();
+        const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+        if (AudioEngine.sink.duration) {
+          AudioEngine.sink.currentTime = ratio * AudioEngine.sink.duration;
+        }
+      },
+
+      setVolume(val) {
+        AudioEngine.sink.volume = parseFloat(val);
+      },
+
+      toggleCurrentFavorite() {
+        if (this.currentTrack) {
+          TrackListView.toggleFav(encodeURIComponent(JSON.stringify(this.currentTrack)));
+        }
+      },
+
+      formatTime(sec) {
+        const m = Math.floor(sec / 60);
+        const s = Math.floor(sec % 60);
+        return `${m}:${s < 10 ? '0' : ''}${s}`;
+      }
+    };
+
+    /**
+     * =========================================================================
+     * AUTH MODAL CONTROLLER
+     * =========================================================================
+     */
+    const AuthModalController = {
+      currentTab: 'login',
+
+      handleAvatarClick() {
+        if (PlaybackState.currentUser) {
+          document.getElementById("confirm-logout-modal").classList.add("is-open");
+        } else {
+          AuthModalController.openModal('login');
+        }
+      },
+
+      cancelLogout() {
+        document.getElementById("confirm-logout-modal").classList.remove("is-open");
+      },
+
+      confirmLogout() {
+        document.getElementById("confirm-logout-modal").classList.remove("is-open");
+        AudioEngine.stopAll();
+
+        PlaybackState.currentUser = null;
+        PlaybackState.sessionToken = null;
+        PlaybackState.favorites = [];
+        PlaybackState.quotaRemainder = 0;
+        PlaybackState.customPlaylists = [
+          { name: "Playlist 1", tracks: [] },
+          { name: "Playlist 2", tracks: [] }
+        ];
+
+        localStorage.removeItem("jrmusic_session");
+        localStorage.removeItem("jrmusic_quota");
+
+        UIFeedback.updateUserVisuals();
+        UIToast.show("Logged out successfully", "info");
+
+        setTimeout(() => {
+          AuthModalController.openModal('login');
+        }, 300);
+      },
+
+      openModal(tab = 'login') {
+        const stage = document.getElementById("fullscreen-auth-stage");
+        stage.classList.remove("stage-hidden");
+        AuthModalController.switchTab(tab);
+      },
+
+      closeModal() {
+        if (!PlaybackState.currentUser) {
+          AuthModalController.showMessage("Authentication required for network access", true);
+          return;
+        }
+        document.getElementById("fullscreen-auth-stage").classList.add("stage-hidden");
+      },
+
+      switchTab(tab) {
+        AuthModalController.currentTab = tab;
+        document.getElementById("auth-feedback-text").innerText = "";
+
+        const creds = document.getElementById("auth-credentials-group");
+        const redeem = document.getElementById("auth-redeem-group");
+        const tabLogin = document.getElementById("tab-btn-login");
+        const tabRegister = document.getElementById("tab-btn-register");
+        const tabRedeem = document.getElementById("tab-btn-redeem");
+        const submitBtn = document.getElementById("btn-auth-primary-submit");
+        const title = document.getElementById("auth-modal-title");
+        const desc = document.getElementById("auth-modal-desc");
+
+        tabLogin.classList.remove("active");
+        tabRegister.classList.remove("active");
+        tabRedeem.classList.remove("active");
+
+        if (tab === 'login') {
+          tabLogin.classList.add("active");
+          creds.style.display = "flex";
+          redeem.style.display = "none";
+          submitBtn.querySelector("span").innerText = "Sign In to JRmusic";
+          title.innerText = "Sign in to JRmusic";
+          desc.innerText = "Authenticate to synchronize remote catalogs and access offline licenses.";
+        } else if (tab === 'register') {
+          tabRegister.classList.add("active");
+          creds.style.display = "flex";
+          redeem.style.display = "none";
+          submitBtn.querySelector("span").innerText = "Register Institutional Account";
+          title.innerText = "Create JR Account";
+          desc.innerText = "Register credentials directly to the Cloudflare D1 / Worker backend.";
+        } else if (tab === 'redeem') {
+          tabRedeem.classList.add("active");
+          creds.style.display = "none";
+          redeem.style.display = "flex";
+          title.innerText = "Redeem Premium License";
+          desc.innerText = "输入管理员发放的卡密，即刻激活全音质 Premium 权益及离线配额。";
+        }
+      },
+
+      showMessage(msg, isError = false) {
+        const el = document.getElementById("auth-feedback-text");
+        el.className = `cloud-auth-feedback ${isError ? 'error' : 'success'}`;
+        el.innerText = msg;
+      },
+
+      async handlePrimaryAuth() {
+        const username = document.getElementById("auth-input-user").value.trim();
+        const password = document.getElementById("auth-input-pass").value.trim();
+        if (!username || !password) {
+          AuthModalController.showMessage("Username and password are required.", true);
+          return;
+        }
+
+        const isLogin = AuthModalController.currentTab === 'login';
+        const endpoint = isLogin ? '/api/login' : '/api/register';
+
+        AuthModalController.showMessage("正在连接认证网关...", false);
+
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 12000);
+
+          const res = await fetch(`${CONFIG.WORKER_API_BASE}${endpoint}`, {
+            method: "POST",
+            mode: "cors",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ username, password }),
+            signal: controller.signal
+          });
+
+          clearTimeout(timeoutId);
+
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            throw new Error(data.message || `认证被拒绝 (HTTP ${res.status})`);
+          }
+
+          AuthModalController.setSession(data.user);
+          AuthModalController.showMessage("Identity authorized. Connecting to workspace...", false);
+          UIToast.show(`Welcome back, ${data.user.username}!`, 'success');
+
+          setTimeout(() => {
+            AuthModalController.closeModal();
+          }, 600);
+        } catch (err) {
+          console.error("Auth Exception:", err);
+          let errorMsg = err.message;
+          if (err.name === 'AbortError') {
+            errorMsg = "连接超时，请检查后端网关或网络状态";
+          } else if (errorMsg.includes("Load failed") || errorMsg.includes("Failed to fetch")) {
+            errorMsg = "网络连接失败 (Worker 离线或跨域阻断)";
+          }
+          AuthModalController.showMessage(errorMsg, true);
+          UIToast.show(errorMsg, 'error');
+        }
+      },
+
+      async handleRedeem() {
+        if (!PlaybackState.currentUser) {
+          AuthModalController.showMessage("You must be logged in to redeem license keys.", true);
+          return;
+        }
+        const code = document.getElementById("auth-input-license").value.trim();
+        if (!code) {
+          AuthModalController.showMessage("Please specify a valid license code.", true);
+          return;
+        }
+
+        AuthModalController.showMessage("正在验证卡密有效性...", false);
+
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 12000);
+
+          const res = await fetch(`${CONFIG.WORKER_API_BASE}/api/redeem`, {
+            method: "POST",
+            mode: "cors",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ username: PlaybackState.currentUser.username, code }),
+            signal: controller.signal
+          });
+
+          clearTimeout(timeoutId);
+
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.message || "Redemption failed.");
+
+          const addedDownloads = data.grantedQuota || 0;
+          PlaybackState.quotaRemainder += addedDownloads;
+          if (data.isPremium) {
+            PlaybackState.currentUser.isPremium = true;
+          }
+
+          localStorage.setItem("jrmusic_session", JSON.stringify(PlaybackState.currentUser));
+          localStorage.setItem("jrmusic_quota", PlaybackState.quotaRemainder.toString());
+
+          UIFeedback.updateUserVisuals();
+
+          AuthModalController.showMessage(data.message || "激活成功！", false);
+          UIToast.show(data.isPremium ? "👑 尊贵 Premium 会员已生效！" : `成功增加 ${addedDownloads} 下载配额`, 'success');
+          document.getElementById("auth-input-license").value = "";
+
+          setTimeout(() => {
+            AuthModalController.closeModal();
+          }, 800);
+        } catch (err) {
+          console.error("Redeem Exception:", err);
+          let errorMsg = err.message;
+          if (err.name === 'AbortError') {
+            errorMsg = "连接超时，请重试";
+          } else if (errorMsg.includes("Load failed") || errorMsg.includes("Failed to fetch")) {
+            errorMsg = "兑换请求被中断 (网络异常)";
+          }
+          AuthModalController.showMessage(errorMsg, true);
+          UIToast.show(errorMsg, 'error');
+        }
+      },
+
+      setSession(userObj) {
+        PlaybackState.currentUser = userObj;
+        PlaybackState.sessionToken = userObj.token;
+        PlaybackState.favorites = userObj.favorites || [];
+        PlaybackState.quotaRemainder = userObj.downloadQuota !== undefined ? userObj.downloadQuota : CONFIG.DEFAULT_DOWNLOAD_QUOTA;
+        PlaybackState.customPlaylists = userObj.customPlaylists || [
+          { name: "Playlist 1", tracks: [] },
+          { name: "Playlist 2", tracks: [] }
+        ];
+
+        localStorage.setItem("jrmusic_session", JSON.stringify(userObj));
+        localStorage.setItem("jrmusic_quota", PlaybackState.quotaRemainder.toString());
+
+        document.getElementById("fullscreen-auth-stage").classList.add("stage-hidden");
+        UIFeedback.updateUserVisuals();
+      },
+
+      restoreSession() {
+        const stored = localStorage.getItem("jrmusic_session");
+        if (stored) {
+          try {
+            const user = JSON.parse(stored);
+            const savedQuota = localStorage.getItem("jrmusic_quota");
+            if (savedQuota !== null) user.downloadQuota = parseInt(savedQuota, 10);
+            AuthModalController.setSession(user);
+          } catch (e) {
+            localStorage.removeItem("jrmusic_session");
+          }
+        }
+      }
+    };
+
+    const TrackListView = {
+      renderList(title, trackArray) {
+        document.getElementById("listing-heading").innerText = title;
+        const container = document.getElementById("track-items-container");
+        container.innerHTML = "";
+
+        if (!trackArray || trackArray.length === 0) {
+          container.innerHTML = `<div style="padding: 40px; color: var(--text-muted); text-align: center; font-family: var(--font-mono); font-size: 0.9rem;">No tracks found in this view.</div>`;
+          return;
+        }
+
+        trackArray.forEach((track, index) => {
+          const isCached = PlaybackState.offlineCacheCatalog.has(String(track.id));
+          const isFav = PlaybackState.favorites.some(f => f.id === track.id);
+          const isCurrent = AudioEngine.currentTrack && String(AudioEngine.currentTrack.id) === String(track.id);
+
+          const row = document.createElement("div");
+          row.className = `track-row-node ${isCurrent ? 'current-playing' : ''}`;
+          row.innerHTML = `
+            <div class="track-idx-col">
+              <span>${index + 1}</span>
+              <svg viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+            </div>
+            <div class="track-meta-col">
+              <span class="track-name-main">${track.title}</span>
+              <span class="track-subpath">${track.artist} · ${track.album}</span>
+            </div>
+            <div class="track-codec-col">${(track.quality || PlaybackState.currentQuality).toUpperCase()}</div>
+            <div class="track-cache-col">
+              <span class="status-ping ${isCached ? 'cached' : ''}"></span>
+              <span>${isCached ? 'Edge Cached' : 'Cloud CDN'}</span>
+            </div>
+            <div class="track-actions-col">
+              <button class="action-icon-hit ${isFav ? 'active-fav' : ''}" onclick="event.stopPropagation(); TrackListView.toggleFav('${encodeURIComponent(JSON.stringify(track))}')">
+                <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+              </button>
+              <button class="action-icon-hit" onclick="event.stopPropagation(); MusicAPIEngine.downloadDirect('${track.id}')" title="Direct CDN download to IndexedDB">
+                <svg viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
+              </button>
+            </div>
+          `;
+          row.onclick = () => {
+            PlaybackState.currentPlaylist = trackArray;
+            PlaybackState.currentTrackPointer = index;
+            AudioEngine.loadAndPlay(track);
+          };
+          container.appendChild(row);
+        });
+      },
+
+      toggleFav(encoded) {
+        const track = JSON.parse(decodeURIComponent(encoded));
+        const idx = PlaybackState.favorites.findIndex(f => f.id === track.id);
+        if (idx >= 0) {
+          PlaybackState.favorites.splice(idx, 1);
+          UIToast.show(`Removed "${track.title}" from favorites`, "info");
+        } else {
+          PlaybackState.favorites.push(track);
+          UIToast.show(`Added "${track.title}" to favorites`, "success");
+        }
+        document.getElementById("fav-counter-label").innerText = `${PlaybackState.favorites.length}`;
+        TrackListView.syncUserData();
+        TrackListView.refreshCurrentView();
+      },
+
+      async syncUserData() {
+        if (!PlaybackState.currentUser) return;
+        try {
+          await fetch(`${CONFIG.WORKER_API_BASE}/api/user/sync-meta`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              username: PlaybackState.currentUser.username,
+              favorites: PlaybackState.favorites,
+              customPlaylists: PlaybackState.customPlaylists
+            })
+          });
+        } catch (e) {
+          console.warn("Background sync error:", e);
+        }
+      },
+
+      refreshCurrentView() {
+        const title = document.getElementById("listing-heading").innerText;
+        if (title === "Favorite Musics") {
+          TrackListView.renderList(title, PlaybackState.favorites);
+        } else if (title === "Offline Edge Vault") {
+          AppNavigation.switchStage('offlines');
+        } else if (title.startsWith("Search:") || title.startsWith("歌单:")) {
+          TrackListView.renderList(title, PlaybackState.flatTrackIndex);
+        }
+      }
+    };
+
+    const CustomPlaylistsModule = {
+      inspectPlaylist(index) {
+        const pl = PlaybackState.customPlaylists[index];
+        if (!pl) return;
+        TrackListView.renderList(pl.name, pl.tracks);
+      },
+
+      async promptNewPlaylist() {
+        if (!PlaybackState.currentUser) {
+          AuthModalController.openModal('login');
+          return;
+        }
+
+        const name = await CustomPrompt.show("Create Playlist", "Enter a title for your collection:", "My Collection");
+        if (name && name.trim()) {
+          PlaybackState.customPlaylists.push({ name: name.trim(), tracks: [] });
+          TrackListView.syncUserData();
+          UIToast.show(`Playlist "${name.trim()}" created.`, "success");
+        }
+      }
+    };
+
+    const AppNavigation = {
+      async switchStage(target) {
+        document.querySelectorAll(".liquid-nav-item").forEach(el => el.classList.remove("active"));
+
+        if (target === 'home') {
+          const el = document.getElementById("nav-main-home");
+          if (el) el.classList.add("active");
+        } else if (target === 'all-musics') {
+          const el = document.getElementById("nav-all-musics");
+          if (el) el.classList.add("active");
+          TrackListView.renderList("Search Library", PlaybackState.flatTrackIndex);
+        } else if (target === 'offlines') {
+          const el = document.getElementById("nav-offlines");
+          if (el) el.classList.add("active");
+          const records = await OfflineAudioStore.getAllCachedRecords();
+          const list = records.map(r => ({
+            id: String(r.id),
+            title: r.title,
+            artist: r.artist,
+            album: r.album,
+            picUrl: r.picUrl,
+            quality: r.quality,
+            lyric: r.lyric,
+            tlyric: r.tlyric
+          }));
+          TrackListView.renderList("Offline Edge Vault", list);
+        } else if (target === 'my-playlists') {
+          const el = document.getElementById("nav-my-playlists");
+          if (el) el.classList.add("active");
+        }
+      }
+    };
+
+    const UIFeedback = {
+      updateQuotaVisuals() {
+        document.getElementById("header-quota-badge").innerText = PlaybackState.quotaRemainder;
+      },
+
+      updateUserVisuals() {
+        const isPrem = !!(PlaybackState.currentUser && PlaybackState.currentUser.isPremium);
+
+        if (isPrem) {
+          document.body.classList.add("is-premium-tier");
+          document.getElementById("user-tier-label").innerHTML = `<span style="color:#f59e0b;">👑 Premium VIP</span>`;
+          document.getElementById("cockpit-tier-label").innerText = "👑 Premium Lossless";
+          document.getElementById("auth-tier-badge").innerText = "PREMIUM PIPELINE";
+          document.getElementById("telemetry-tier-label").innerText = "24-Bit Master Hi-Res";
+        } else {
+          document.body.classList.remove("is-premium-tier");
+          document.getElementById("user-tier-label").innerText = "Standard Member";
+          document.getElementById("cockpit-tier-label").innerText = "Cloud Studio";
+          document.getElementById("auth-tier-badge").innerText = "STANDARD PIPELINE";
+          document.getElementById("telemetry-tier-label").innerText = "Standard MP3";
+        }
+
+        if (PlaybackState.currentUser) {
+          const name = PlaybackState.currentUser.username;
+          document.getElementById("user-display-name").innerText = name;
+          document.getElementById("user-avatar-initial").innerText = name.charAt(0).toUpperCase();
+        } else {
+          document.getElementById("user-display-name").innerText = "Not Signed In";
+          document.getElementById("user-avatar-initial").innerText = "?";
+        }
+        UIFeedback.updateQuotaVisuals();
+      }
+    };
+
+    // Spectrum Animation Loop
+    setInterval(() => {
+      const bars = document.querySelectorAll("#live-spectrum-box .spectrum-bar");
+      const isPlaying = AudioEngine.sink && !AudioEngine.sink.paused;
+      bars.forEach(b => {
+        if (isPlaying) {
+          const h = Math.floor(Math.random() * 18) + 4;
+          b.style.height = `${h}px`;
+        } else {
+          b.style.height = '4px';
+        }
+      });
+    }, 150);
+
+    window.addEventListener("DOMContentLoaded", async () => {
+      await OfflineAudioStore.init();
+      AudioEngine.init();
+      AuthModalController.restoreSession();
+      UIFeedback.updateUserVisuals();
+    });
+  </script>
+</body>
+</html>
+"""
+
+class Handler(http.server.SimpleHTTPRequestHandler):
+    def do_GET(self):
+        # Serve the HTML content for all GET requests
+        self.send_response(200)
+        self.send_header('Content-type', 'text/html; charset=utf-8')
+        self.end_headers()
+        self.wfile.write(HTML_CONTENT.encode('utf-8'))
+    
+    def log_message(self, format, *args):
+        # Suppress server logs for cleaner output
+        pass
+
+def find_free_port(start_port=8000, max_attempts=10):
+    """Finds an available port to run the HTTP server on."""
+    import socket
+    for port in range(start_port, start_port + max_attempts):
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.bind(('', port))
+                return port
+        except OSError:
+            continue
+    return None
+
+def check_pyinstaller():
+    """Checks if PyInstaller is installed."""
+    try:
+        import PyInstaller
+        return True
+    except ImportError:
+        return False
+
+def install_pyinstaller():
+    """Installs PyInstaller using pip."""
+    print("Installing PyInstaller (this may take a moment)...")
+    try:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "pyinstaller"])
+        print("PyInstaller installed successfully.")
+        return True
+    except Exception as e:
+        print(f"Failed to install PyInstaller: {e}")
+        return False
+
+def build_exe():
+    """Builds the executable using PyInstaller."""
+    script_path = Path(__file__).resolve()
+    script_dir = script_path.parent
+    print(f"Building executable for '{APP_NAME}'...")
+    print(f"Output will be in: {script_dir}")
+    try:
+        # PyInstaller command with options
+        # --onefile: Creates a single executable file
+        # --noconsole: Suppresses the console window (for GUI apps)
+        # --name: Sets the name of the executable
+        # --distpath: Specifies the output directory
+        # --workpath, --specpath: Sets temporary directories
+        result = subprocess.run([
+            sys.executable, "-m", "PyInstaller",
+            "--onefile", "--noconsole", "--name", APP_NAME,
+            "--distpath", str(script_dir),
+            "--workpath", str(script_dir / "build_temp"),
+            "--specpath", str(script_dir / "build_temp"),
+            str(script_path)
+        ], capture_output=True, text=True) # Capture output for better error reporting
+
+        exe_path = script_dir / f"{APP_NAME}.exe"
+        if exe_path.exists():
+            print(f"\n✅ Success! Your .exe is ready at:\n{exe_path}")
+            # Clean up temporary build files
+            import shutil
+            build_temp_dir = script_dir / "build_temp"
+            if build_temp_dir.exists():
+                shutil.rmtree(build_temp_dir)
+            spec_file = script_dir / f"{APP_NAME}.spec"
+            if spec_file.exists():
+                os.remove(spec_file)
+            return True
+        else:
+            print(f"\n❌ Failed to create {APP_NAME}.exe.")
+            print("PyInstaller output:")
+            print(result.stdout)
+            print(result.stderr)
+            return False
+    except Exception as e:
+        print(f"An error occurred during PyInstaller build: {e}")
+        return False
+
+def run_server():
+    """Starts the HTTP server and opens the browser."""
+    port = find_free_port()
+    if port is None:
+        print("Error: Could not find an available port.")
+        input("Press Enter to exit...")
+        return
+    print(f"Serving '{APP_NAME}' at http://localhost:{port}")
+    print("Close the browser window to stop the server (you may need to close a console window as well).")
+    
+    def open_browser_after_delay():
+        webbrowser.open(f'http://localhost:{port}')
+    
+    try:
+        with socketserver.TCPServer(("", port), Handler) as httpd:
+            # Open browser after a short delay to ensure server is ready
+            Timer(0.5, open_browser_after_delay).start()
+            httpd.serve_forever() # Start serving requests (runs indefinitely)
+    except Exception as e:
+        print(f"Server error: {e}")
+
+def main():
+    """Main logic to either run the server or build the executable."""
+    if getattr(sys, 'frozen', False):
+        # If running as a PyInstaller executable, just run the server
+        run_server()
+        return
+    
+    # If running as a .py script, check for existing exe and offer to rebuild
+    exe_path = Path(__file__).resolve().parent / f"{APP_NAME}.exe"
+    if exe_path.exists():
+        response = input(f"'{APP_NAME}.exe' already exists. Rebuild? (y/N): ").strip().lower()
+        if response != 'y':
+            print("Skipping rebuild. Running application...")
+            run_server()
+            return
+    
+    # Check and install PyInstaller if needed
+    if not check_pyinstaller():
+        if not install_pyinstaller():
+            print("Cannot proceed without PyInstaller. Exiting.")
+            return
+            
+    # Build the executable
+    if build_exe():
+        response = input("\nRun the newly created .exe now? (y/N): ").strip().lower()
+        if response == 'y':
+            print("Running application...")
+            run_server()
+    else:
+        print("Executable build failed. Please check the output for errors.")
+    input("Press Enter to exit...") # Keep console open after actions complete
+
+if __name__ == "__main__":
+    main()
